@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paiement confirmé — Folio PDF Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0c0c0f;
+      color: #f0f0f0;
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #13131a;
+      border: 1px solid rgba(232,255,71,0.2);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(232,255,71,0.06);
+    }
+
+    .logo {
+      width: 56px; height: 56px;
+      background: #e8ff47;
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-size: 24px; font-weight: 800;
+      color: #0c0c0f;
+      margin: 0 auto 24px;
+    }
+
+    .checkmark {
+      width: 64px; height: 64px;
+      border-radius: 50%;
+      background: rgba(232,255,71,0.12);
+      border: 2px solid #e8ff47;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 24px;
+      font-size: 28px;
+    }
+
+    h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      color: #e8ff47;
+      margin-bottom: 12px;
+    }
+
+    p {
+      color: #888899;
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 8px;
+    }
+
+    .note {
+      margin-top: 28px;
+      padding: 16px;
+      background: rgba(232,255,71,0.06);
+      border-radius: 10px;
+      border: 1px solid rgba(232,255,71,0.12);
+      font-size: 13px;
+      color: #a0a0b0;
+    }
+
+    .close-btn {
+      display: inline-block;
+      margin-top: 28px;
+      background: #e8ff47;
+      color: #0c0c0f;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 12px 28px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: none;
+      letter-spacing: 0.2px;
+    }
+    .close-btn:hover { background: #f0ff6e; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">F</div>
+    <div class="checkmark">✓</div>
+    <h1>Paiement confirmé !</h1>
+    <p>Vos crédits ont été ajoutés à votre compte Folio PDF Studio.</p>
+    <p>Vous pouvez fermer cette page et retourner à l'extension.</p>
+    <div class="note">
+      💡 Vos crédits sont disponibles immédiatement. Rouvrez simplement votre PDF dans l'éditeur.
+    </div>
+    <button class="close-btn" onclick="window.close()">Fermer cette page</button>
+  </div>
+</body>
+</html>

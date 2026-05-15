@@ -1,0 +1,12 @@
+{
+  "name": "folio-backend",
+  "version": "1.0.0",
+  "description": "Folio PDF Studio — Backend API (Vercel)",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "stripe": "^14.21.0"
+  }
+}

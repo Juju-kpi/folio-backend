@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Paiement annulé — Folio PDF Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0c0c0f; color: #f0f0f0; font-family: 'DM Sans', sans-serif;
+      min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+    .card {
+      background: #13131a; border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px; padding: 48px 40px; max-width: 420px; width: 100%;
+      text-align: center;
+    }
+    .logo { width: 56px; height: 56px; background: #e8ff47; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: #0c0c0f;
+      margin: 0 auto 24px; }
+    .icon { font-size: 40px; margin-bottom: 20px; }
+    h1 { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; color: #f0f0f0; margin-bottom: 12px; }
+    p  { color: #888899; font-size: 15px; line-height: 1.6; margin-bottom: 8px; }
+    button { margin-top: 28px; background: #1e1e2a; color: #f0f0f0; font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 14px; padding: 12px 28px; border-radius: 10px;
+      cursor: pointer; border: 1px solid rgba(255,255,255,0.1); }
+    button:hover { background: #252535; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">F</div>
+    <div class="icon">↩</div>
+    <h1>Paiement annulé</h1>
+    <p>Votre paiement n'a pas été effectué.</p>
+    <p>Vous pouvez fermer cette page et réessayer depuis l'extension.</p>
+    <button onclick="window.close()">Fermer</button>
+  </div>
+</body>
+</html>
