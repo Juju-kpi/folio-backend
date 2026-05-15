@@ -6,8 +6,8 @@ import Stripe from 'stripe';
 
 const PACKS = {
   '1':  { credits: 1,  price_cts: 49,  label: '1 session d\'édition'   },
-  '5':  { credits: 5,  price_cts: 199, label: '5 sessions d\'édition'  },
-  '20': { credits: 20, price_cts: 699, label: '20 sessions d\'édition' }
+  '5':  { credits: 5,  price_cts: 100, label: '5 sessions d\'édition'  },
+  '20': { credits: 20, price_cts: 300, label: '20 sessions d\'édition' }
 };
 
 export default async function handler(req, res) {
