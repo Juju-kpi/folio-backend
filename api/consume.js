@@ -94,6 +94,7 @@ return {
   creditsLeft: user.credits,
   usedLifetimeFree: true
 };
+  }
 
   // ── First free use ──────────────────────────────────────
   if (!user.free_used) {
