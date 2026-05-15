@@ -85,19 +85,23 @@ async function tryConsume(uid) {
   // ── Lifetime free users ─────────────────────────────────
   if (user.lifetime_free === true) {
 
-    return {
-      ok: true,
-      creditsLeft: user.credits,
-      usedLifetimeFree: true
-    };
-  }
+    await patchUser(uid, {
+  edit_count: (user.edit_count || 0) + 1
+});
+
+return {
+  ok: true,
+  creditsLeft: user.credits,
+  usedLifetimeFree: true
+};
 
   // ── First free use ──────────────────────────────────────
   if (!user.free_used) {
 
     await patchUser(uid, {
-      free_used: true
-    });
+  free_used: true,
+  edit_count: (user.edit_count || 0) + 1
+});
 
     return {
       ok: true,
@@ -110,8 +114,9 @@ async function tryConsume(uid) {
   if (user.credits > 0) {
 
     await patchUser(uid, {
-      credits: user.credits - 1
-    });
+  credits: user.credits - 1,
+  edit_count: (user.edit_count || 0) + 1
+});
 
     return {
       ok: true,
