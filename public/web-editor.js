@@ -1353,21 +1353,14 @@ $('btnConvertDo').addEventListener('click', async () => {
   });
 
   const blob = await Packer.toBlob(wordDoc);
-
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement('a');
-
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
   a.href = url;
-  a.download = 'folio_export.docx';
-
+  a.download = fileName.replace('.pdf', '.docx');
   a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 
-  setTimeout(() => URL.revokeObjectURL(url), 2000); 
-}
-    
-    
-    else {
+    } else {
       // Image: jpg / png
       const fmt = convertFmt === 'png' ? 'image/png' : 'image/jpeg';
       const ext = convertFmt === 'png' ? 'png' : 'jpg';
