@@ -1181,7 +1181,193 @@ $('btnConvertDo').addEventListener('click', async () => {
       const mimes = { txt: 'text/plain', html: 'text/html', csv: 'text/csv' };
       downloadText(output, `folio_export.${convertFmt}`, mimes[convertFmt]);
 
-    } else {
+    } else if (convertFmt === 'docx') {
+
+  const { Document, Packer, Paragraph, TextRun, PageBreak, AlignmentType } = docx;
+  const children = [];
+
+  for (let i = 0; i < pages.length; i++) {
+
+    bar.style.width = ((i + 1) / pages.length * 100) + '%';
+
+    const page = await exportPdfDoc.getPage(pages[i]);
+    const content = await page.getTextContent();
+    const vp = page.getViewport({ scale: 1 });
+
+    // Group lines
+    const lineMap = new Map();
+
+    for (const item of content.items) {
+
+      if (!item.str || !item.str.trim()) continue;
+
+      const y = Math.round(item.transform[5]);
+
+      let key = y;
+
+      for (const k of lineMap.keys()) {
+        if (Math.abs(k - y) <= 3) {
+          key = k;
+          break;
+        }
+      }
+
+      if (!lineMap.has(key)) lineMap.set(key, []);
+
+      lineMap.get(key).push(item);
+    }
+
+    const sortedYs = Array.from(lineMap.keys()).sort((a, b) => b - a);
+
+    if (sortedYs.length === 0) {
+
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: `[Page ${pages[i]} — no extractable text]`,
+              italics: true,
+              color: '999999'
+            })
+          ]
+        })
+      );
+    }
+
+    for (const y of sortedYs) {
+
+      const items = lineMap
+        .get(y)
+        .sort((a, b) => a.transform[4] - b.transform[4]);
+
+      const runs = items.map(item => {
+
+        const fontSize = Math.abs(item.transform[3]);
+
+        const fontName = (item.fontName || '').toLowerCase();
+
+        return new TextRun({
+          text: item.str,
+          size: Math.round(Math.max(fontSize, 6) * 2),
+          bold: fontName.includes('bold'),
+          italics: fontName.includes('italic') || fontName.includes('oblique'),
+          font:
+            fontName.includes('times') || fontName.includes('serif')
+              ? 'Times New Roman'
+              : fontName.includes('courier') || fontName.includes('mono')
+              ? 'Courier New'
+              : 'Arial',
+        });
+      });
+
+      const avgX =
+        items.reduce((s, it) => s + it.transform[4], 0) / items.length;
+
+      let alignment = AlignmentType.LEFT;
+
+      if (avgX > vp.width * 0.6)
+        alignment = AlignmentType.RIGHT;
+      else if (avgX > vp.width * 0.35)
+        alignment = AlignmentType.CENTER;
+
+      children.push(
+        new Paragraph({
+          alignment,
+          spacing: { before: 0, after: 80 },
+          children: runs,
+        })
+      );
+    }
+
+    // signatures
+    const pageSigs = sigsByPage.get(pages[i]);
+
+    if (pageSigs && pageSigs.length > 0) {
+
+      for (const sig of pageSigs) {
+
+        try {
+
+          const { ImageRun } = docx;
+
+          const b64 = sig.dataURL.split(',')[1];
+
+          const bytes = base64ToBytes(b64);
+
+          const widthPx = parseFloat(sig.width) || 180;
+
+          children.push(
+            new Paragraph({
+              children: [
+                new ImageRun({
+                  data: bytes,
+                  transformation: {
+                    width: Math.round(widthPx * 0.75),
+                    height: Math.round(widthPx * 0.3),
+                  },
+                  type: sig.dataURL.startsWith('data:image/png')
+                    ? 'png'
+                    : 'jpg',
+                }),
+              ],
+            })
+          );
+
+        } catch (e) {
+
+          console.warn('docx sig embed:', e);
+        }
+      }
+    }
+
+    if (i < pages.length - 1) {
+
+      children.push(
+        new Paragraph({
+          children: [new PageBreak()]
+        })
+      );
+    }
+  }
+
+  const wordDoc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            size: {
+              width: 11906,
+              height: 16838,
+            },
+            margin: {
+              top: 1134,
+              right: 1134,
+              bottom: 1134,
+              left: 1134,
+            },
+          },
+        },
+        children,
+      },
+    ],
+  });
+
+  const blob = await Packer.toBlob(wordDoc);
+
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+
+  a.href = url;
+  a.download = 'folio_export.docx';
+
+  a.click();
+
+  setTimeout(() => URL.revokeObjectURL(url), 2000); 
+}
+    
+    
+    else {
       // Image: jpg / png
       const fmt = convertFmt === 'png' ? 'image/png' : 'image/jpeg';
       const ext = convertFmt === 'png' ? 'png' : 'jpg';
