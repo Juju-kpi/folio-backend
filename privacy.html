@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Folio PDF Studio</title>
+  <meta name="description" content="Privacy Policy for Folio PDF Studio Chrome Extension.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0c0c0f;
+      --bg2:     #111115;
+      --bg3:     #18181d;
+      --border:  rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --accent:  #e8ff47;
+      --text:    #f0f0f0;
+      --text2:   #a0a0b0;
+      --muted:   #555568;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 0 48px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(12,12,15,0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-logo-mark {
+      width: 30px; height: 30px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      color: #0c0c0f;
+    }
+
+    .nav-logo-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .nav-back {
+      color: var(--text2);
+      text-decoration: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s;
+    }
+    .nav-back:hover { color: var(--text); }
+
+    /* ── LAYOUT ── */
+    .page-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 72px 24px 100px;
+    }
+
+    /* ── HEADER ── */
+    .doc-header {
+      margin-bottom: 56px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .doc-tag {
+      display: inline-block;
+      font-family: 'Syne', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(232,255,71,0.08);
+      border: 1px solid rgba(232,255,71,0.2);
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+    }
+
+    .doc-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(32px, 5vw, 52px);
+      letter-spacing: -1.5px;
+      line-height: 1.05;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .doc-meta {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    /* ── TABLE OF CONTENTS ── */
+    .toc {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin-bottom: 56px;
+    }
+
+    .toc-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toc li {
+      counter-increment: toc;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toc li::before {
+      content: counter(toc, decimal-leading-zero);
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      min-width: 22px;
+    }
+
+    .toc a {
+      color: var(--text2);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.15s;
+    }
+    .toc a:hover { color: var(--accent); }
+
+    /* ── CONTENT ── */
+    .doc-section {
+      margin-bottom: 56px;
+    }
+
+    .doc-section h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .doc-section h2 .sec-num {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      background: rgba(232,255,71,0.08);
+      border: 1px solid rgba(232,255,71,0.2);
+      padding: 2px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .doc-section p {
+      color: var(--text2);
+      font-size: 15px;
+      margin-bottom: 16px;
+    }
+
+    .doc-section ul, .doc-section ol {
+      padding-left: 0;
+      list-style: none;
+      margin-bottom: 16px;
+    }
+
+    .doc-section li {
+      color: var(--text2);
+      font-size: 15px;
+      padding: 6px 0 6px 24px;
+      position: relative;
+      border-bottom: 1px solid rgba(255,255,255,0.035);
+    }
+
+    .doc-section li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .doc-section li:last-child { border-bottom: none; }
+
+    .highlight-box {
+      background: rgba(232,255,71,0.05);
+      border: 1px solid rgba(232,255,71,0.15);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+
+    .highlight-box p {
+      color: #c0c8a0;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .highlight-box strong {
+      color: var(--accent);
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+
+    /* ── FOOTER ── */
+    .doc-footer {
+      border-top: 1px solid var(--border);
+      padding-top: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .doc-footer-copy {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .doc-footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .doc-footer-links a {
+      color: var(--muted);
+      font-size: 13px;
+      transition: color 0.15s;
+    }
+    .doc-footer-links a:hover { color: var(--text2); }
+
+    @media (max-width: 600px) {
+      nav { padding: 0 20px; }
+      .page-wrap { padding: 48px 20px 80px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-mark">F</div>
+      <span class="nav-logo-text">Folio PDF Studio</span>
+    </a>
+    <a href="/" class="nav-back">← Back to home</a>
+  </nav>
+
+  <div class="page-wrap">
+
+    <div class="doc-header">
+      <div class="doc-tag">Legal</div>
+      <h1 class="doc-title">Privacy Policy</h1>
+      <p class="doc-meta">Last updated: June 1, 2025 &nbsp;·&nbsp; Effective immediately</p>
+    </div>
+
+    <div class="toc">
+      <div class="toc-title">Contents</div>
+      <ol>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#data-collected">Data we collect</a></li>
+        <li><a href="#data-not-collected">Data we do NOT collect</a></li>
+        <li><a href="#local-storage">Local storage</a></li>
+        <li><a href="#payments">Payments &amp; Stripe</a></li>
+        <li><a href="#supabase">Backend database</a></li>
+        <li><a href="#third-parties">Third-party services</a></li>
+        <li><a href="#your-rights">Your rights</a></li>
+        <li><a href="#children">Children's privacy</a></li>
+        <li><a href="#changes">Changes to this policy</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ol>
+    </div>
+
+    <div class="doc-section" id="overview">
+      <h2><span class="sec-num">01</span> Overview</h2>
+      <p>Folio PDF Studio ("Folio", "we", "us") is a Chrome browser extension that lets you edit, sign, convert and transform PDF documents directly in your browser.</p>
+      <div class="highlight-box">
+        <p><strong>The short version:</strong> Your PDF files never leave your device. We do not read, upload, store or process your documents on any server. All PDF operations happen locally in your browser using JavaScript.</p>
+      </div>
+      <p>This Privacy Policy explains what limited data we do collect (solely for billing purposes) and how it is handled.</p>
+    </div>
+
+    <div class="doc-section" id="data-collected">
+      <h2><span class="sec-num">02</span> Data we collect</h2>
+      <p>We collect the absolute minimum required to operate the pay-per-use billing system:</p>
+      <ul>
+        <li>An <strong>anonymous user ID</strong> generated randomly in your browser — this is not linked to your name, email, Google account or any personal identifier.</li>
+        <li>A <strong>credit counter</strong> (how many editing sessions you have purchased and used).</li>
+        <li>A <strong>boolean flag</strong> indicating whether your one free trial session has been used.</li>
+        <li><strong>Stripe payment metadata</strong> (see Section 5) — only when you make a purchase.</li>
+      </ul>
+    </div>
+
+    <div class="doc-section" id="data-not-collected">
+      <h2><span class="sec-num">03</span> Data we do NOT collect</h2>
+      <p>We explicitly do not collect, transmit or store any of the following:</p>
+      <ul>
+        <li>The contents of your PDF files — they are never uploaded anywhere.</li>
+        <li>Your name, email address or any personally identifiable information.</li>
+        <li>Your IP address beyond what Stripe and Vercel (our infrastructure) log automatically.</li>
+        <li>Your browser history, browsing behaviour or the websites you visit.</li>
+        <li>Any analytics, telemetry or usage events beyond credit consumption.</li>
+        <li>Cookies — we use no cookies.</li>
+      </ul>
+    </div>
+
+    <div class="doc-section" id="local-storage">
+      <h2><span class="sec-num">04</span> Local storage</h2>
+      <p>The extension uses Chrome's <code>chrome.storage.local</code> API to store the following data <strong>only on your device</strong>:</p>
+      <ul>
+        <li>Your anonymous user ID (<code>folioUID</code>).</li>
+        <li>Temporary session data for your current PDF (raw bytes, modifications, signatures) — cleared when you load a new file.</li>
+        <li>Your selected format preferences.</li>
+      </ul>
+      <p>None of this data is synced to Chrome Sync or transmitted to any external server, with the sole exception of your anonymous UID which is sent to our backend when you interact with the editor (to check and decrement your credit balance).</p>
+    </div>
+
+    <div class="doc-section" id="payments">
+      <h2><span class="sec-num">05</span> Payments &amp; Stripe</h2>
+      <p>Payment processing is handled entirely by <a href="https://stripe.com" target="_blank" rel="noopener">Stripe, Inc.</a>, a certified PCI-DSS Level 1 payment processor. We never see or store your card number, billing address or any payment instrument details.</p>
+      <p>When you purchase a credit pack, Stripe shares with us only:</p>
+      <ul>
+        <li>The anonymous user ID you sent when initiating the checkout (stored in Stripe's session metadata).</li>
+        <li>The number of credits purchased.</li>
+        <li>The payment status (succeeded / failed).</li>
+      </ul>
+      <p>Stripe's own privacy policy governs how Stripe handles your payment data: <a href="https://stripe.com/privacy" target="_blank" rel="noopener">stripe.com/privacy</a>.</p>
+    </div>
+
+    <div class="doc-section" id="supabase">
+      <h2><span class="sec-num">06</span> Backend database (Supabase)</h2>
+      <p>Our backend API is hosted on <a href="https://vercel.com" target="_blank" rel="noopener">Vercel</a> (EU region) and uses <a href="https://supabase.com" target="_blank" rel="noopener">Supabase</a> as a database to store your credit balance. The database contains a single record per anonymous user ID:</p>
+      <ul>
+        <li><code>uid</code> — a randomly generated string like <code>u_lxyz_abc123</code></li>
+        <li><code>credits</code> — integer, number of sessions remaining</li>
+        <li><code>free_used</code> — boolean</li>
+      </ul>
+      <p>There is no way to reverse-engineer your real identity from this data. Supabase privacy policy: <a href="https://supabase.com/privacy" target="_blank" rel="noopener">supabase.com/privacy</a>.</p>
+    </div>
+
+    <div class="doc-section" id="third-parties">
+      <h2><span class="sec-num">07</span> Third-party services</h2>
+      <p>The only external services Folio communicates with are:</p>
+      <ul>
+        <li><strong>Vercel</strong> — hosts the backend API. May log IP addresses in server access logs for up to 30 days.</li>
+        <li><strong>Stripe</strong> — processes payments. Governed by Stripe's own privacy policy.</li>
+        <li><strong>Supabase</strong> — stores credit balances. Data stored in EU (Frankfurt).</li>
+        <li><strong>Google Fonts</strong> — loaded on our website (index.html) only, not inside the extension.</li>
+      </ul>
+      <p>We do not use any advertising networks, analytics platforms (Google Analytics, Mixpanel, etc.) or social media tracking pixels.</p>
+    </div>
+
+    <div class="doc-section" id="your-rights">
+      <h2><span class="sec-num">08</span> Your rights</h2>
+      <p>You have the right to:</p>
+      <ul>
+        <li><strong>Access</strong> — request a copy of the data we hold about your anonymous UID.</li>
+        <li><strong>Deletion</strong> — request deletion of your anonymous UID and associated credit balance at any time. Note: this permanently removes unused credits with no refund.</li>
+        <li><strong>Portability</strong> — receive your credit balance data in a machine-readable format.</li>
+      </ul>
+      <p>To exercise any of these rights, contact us with your anonymous UID (visible in the browser console by typing <code>Payment.getUID()</code> in the Folio editor).</p>
+
+      <div class="highlight-box">
+        <p><strong>GDPR / Swiss nFADP:</strong> Users in the European Economic Area and Switzerland have additional rights under applicable data protection law. We process your data on the legal basis of <em>contract performance</em> (billing) and <em>legitimate interest</em> (fraud prevention).</p>
+      </div>
+    </div>
+
+    <div class="doc-section" id="children">
+      <h2><span class="sec-num">09</span> Children's privacy</h2>
+      <p>Folio PDF Studio is not directed at children under 13 years of age. We do not knowingly collect any data from children. If you believe a child has used our paid service, contact us and we will promptly delete any associated data.</p>
+    </div>
+
+    <div class="doc-section" id="changes">
+      <h2><span class="sec-num">10</span> Changes to this policy</h2>
+      <p>We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated "Last updated" date. We encourage you to review this page periodically. Continued use of the extension after changes constitutes acceptance of the updated policy.</p>
+    </div>
+
+    <div class="doc-section" id="contact">
+      <h2><span class="sec-num">11</span> Contact</h2>
+      <p>For any privacy-related questions or data requests, please contact us at:</p>
+      <div class="highlight-box">
+        <p><strong>Email:</strong> <a href="mailto:privacy@folio-pdf.app">privacy@folio-pdf.app</a><br>
+        We aim to respond within 5 business days.</p>
+      </div>
+    </div>
+
+    <div class="doc-footer">
+      <span class="doc-footer-copy">© 2025 Folio PDF Studio</span>
+      <div class="doc-footer-links">
+        <a href="/">Home</a>
+        <a href="/terms.html">Terms of Service</a>
+        <a href="/privacy.html">Privacy Policy</a>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

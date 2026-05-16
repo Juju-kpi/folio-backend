@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Service — Folio PDF Studio</title>
+  <meta name="description" content="Terms of Service for Folio PDF Studio Chrome Extension.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0c0c0f;
+      --bg2:     #111115;
+      --bg3:     #18181d;
+      --border:  rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --accent:  #e8ff47;
+      --text:    #f0f0f0;
+      --text2:   #a0a0b0;
+      --muted:   #555568;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      line-height: 1.7;
+    }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      padding: 0 48px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(12,12,15,0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .nav-logo-mark {
+      width: 30px; height: 30px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      color: #0c0c0f;
+    }
+
+    .nav-logo-text {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text);
+    }
+
+    .nav-back {
+      color: var(--text2);
+      text-decoration: none;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.15s;
+    }
+    .nav-back:hover { color: var(--text); }
+
+    .page-wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 72px 24px 100px;
+    }
+
+    .doc-header {
+      margin-bottom: 56px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .doc-tag {
+      display: inline-block;
+      font-family: 'Syne', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: rgba(232,255,71,0.08);
+      border: 1px solid rgba(232,255,71,0.2);
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 20px;
+    }
+
+    .doc-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(32px, 5vw, 52px);
+      letter-spacing: -1.5px;
+      line-height: 1.05;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .doc-meta {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .toc {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px 28px;
+      margin-bottom: 56px;
+    }
+
+    .toc-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toc li {
+      counter-increment: toc;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toc li::before {
+      content: counter(toc, decimal-leading-zero);
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      min-width: 22px;
+    }
+
+    .toc a {
+      color: var(--text2);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.15s;
+    }
+    .toc a:hover { color: var(--accent); }
+
+    .doc-section {
+      margin-bottom: 56px;
+    }
+
+    .doc-section h2 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      color: var(--text);
+      margin-bottom: 20px;
+      padding-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .doc-section h2 .sec-num {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--accent);
+      background: rgba(232,255,71,0.08);
+      border: 1px solid rgba(232,255,71,0.2);
+      padding: 2px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .doc-section p {
+      color: var(--text2);
+      font-size: 15px;
+      margin-bottom: 16px;
+    }
+
+    .doc-section ul, .doc-section ol {
+      padding-left: 0;
+      list-style: none;
+      margin-bottom: 16px;
+    }
+
+    .doc-section li {
+      color: var(--text2);
+      font-size: 15px;
+      padding: 6px 0 6px 24px;
+      position: relative;
+      border-bottom: 1px solid rgba(255,255,255,0.035);
+    }
+
+    .doc-section li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .doc-section li:last-child { border-bottom: none; }
+
+    .highlight-box {
+      background: rgba(232,255,71,0.05);
+      border: 1px solid rgba(232,255,71,0.15);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+
+    .highlight-box p {
+      color: #c0c8a0;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    .highlight-box strong { color: var(--accent); }
+
+    .warn-box {
+      background: rgba(255,71,87,0.05);
+      border: 1px solid rgba(255,71,87,0.2);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin: 24px 0;
+    }
+
+    .warn-box p {
+      color: #c8a0a0;
+      font-size: 14px;
+      margin: 0;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    a:hover { text-decoration: underline; }
+
+    .doc-footer {
+      border-top: 1px solid var(--border);
+      padding-top: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .doc-footer-copy {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .doc-footer-links {
+      display: flex;
+      gap: 20px;
+    }
+
+    .doc-footer-links a {
+      color: var(--muted);
+      font-size: 13px;
+      transition: color 0.15s;
+    }
+    .doc-footer-links a:hover { color: var(--text2); }
+
+    @media (max-width: 600px) {
+      nav { padding: 0 20px; }
+      .page-wrap { padding: 48px 20px 80px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="nav-logo">
+      <div class="nav-logo-mark">F</div>
+      <span class="nav-logo-text">Folio PDF Studio</span>
+    </a>
+    <a href="/" class="nav-back">← Back to home</a>
+  </nav>
+
+  <div class="page-wrap">
+
+    <div class="doc-header">
+      <div class="doc-tag">Legal</div>
+      <h1 class="doc-title">Terms of Service</h1>
+      <p class="doc-meta">Last updated: June 1, 2025 &nbsp;·&nbsp; Effective immediately</p>
+    </div>
+
+    <div class="toc">
+      <div class="toc-title">Contents</div>
+      <ol>
+        <li><a href="#acceptance">Acceptance of terms</a></li>
+        <li><a href="#service">Description of service</a></li>
+        <li><a href="#eligibility">Eligibility</a></li>
+        <li><a href="#credits">Credits &amp; billing</a></li>
+        <li><a href="#refunds">Refund policy</a></li>
+        <li><a href="#acceptable-use">Acceptable use</a></li>
+        <li><a href="#intellectual-property">Intellectual property</a></li>
+        <li><a href="#disclaimer">Disclaimer of warranties</a></li>
+        <li><a href="#limitation">Limitation of liability</a></li>
+        <li><a href="#termination">Termination</a></li>
+        <li><a href="#governing-law">Governing law</a></li>
+        <li><a href="#changes">Changes to terms</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ol>
+    </div>
+
+    <div class="doc-section" id="acceptance">
+      <h2><span class="sec-num">01</span> Acceptance of terms</h2>
+      <p>By installing, accessing or using the Folio PDF Studio Chrome extension ("the Extension") or visiting our website, you agree to be bound by these Terms of Service ("Terms"). If you do not agree to these Terms, please uninstall the Extension and do not use our services.</p>
+      <p>These Terms constitute a legally binding agreement between you ("User", "you") and the individual operator of Folio PDF Studio ("we", "us", "Folio").</p>
+    </div>
+
+    <div class="doc-section" id="service">
+      <h2><span class="sec-num">02</span> Description of service</h2>
+      <p>Folio PDF Studio is a Chrome browser extension that provides the following tools for working with PDF files:</p>
+      <ul>
+        <li><strong>Always free:</strong> PDF conversion (to JPG, PNG, DOCX, TXT, HTML, CSV), e-signatures, page extraction, PDF merging, and annotations.</li>
+        <li><strong>Credit-based:</strong> PDF text editing (modifying existing text blocks within a PDF). Each text editing session consumes one credit.</li>
+      </ul>
+      <div class="highlight-box">
+        <p><strong>Important:</strong> All PDF processing is performed locally in your browser. Your files are never uploaded to any server. We provide a backend only for credit management and payment processing.</p>
+      </div>
+      <p>We reserve the right to modify, suspend or discontinue any part of the service at any time, with or without notice.</p>
+    </div>
+
+    <div class="doc-section" id="eligibility">
+      <h2><span class="sec-num">03</span> Eligibility</h2>
+      <p>You must be at least 13 years of age to use this service. By using Folio PDF Studio, you represent and warrant that:</p>
+      <ul>
+        <li>You are at least 13 years old.</li>
+        <li>You have the legal capacity to enter into these Terms in your jurisdiction.</li>
+        <li>Your use of the Extension will not violate any applicable law or regulation.</li>
+        <li>You will not use the Extension on behalf of an organisation without authority to do so.</li>
+      </ul>
+    </div>
+
+    <div class="doc-section" id="credits">
+      <h2><span class="sec-num">04</span> Credits &amp; billing</h2>
+      <p>The text editing feature operates on a pre-paid credit system:</p>
+      <ul>
+        <li><strong>Free trial:</strong> Every new user receives one free text editing session upon first use.</li>
+        <li><strong>Credit packs:</strong> Additional sessions are purchased in packs (1, 5 or 20 sessions) via Stripe's secure checkout.</li>
+        <li><strong>No expiry:</strong> Credits do not expire. They remain in your account indefinitely.</li>
+        <li><strong>No subscription:</strong> There is no recurring charge. You purchase credits as needed.</li>
+        <li><strong>One session = one click of "Apply":</strong> Each time you apply a text modification, one credit is consumed.</li>
+        <li><strong>Anonymous account:</strong> Credits are tied to a randomly generated ID stored locally in your browser. Clearing browser data or reinstalling the extension may cause your credit balance to be unrecoverable unless you have noted your user ID.</li>
+      </ul>
+      <p>All prices are displayed in Euros (EUR) and are inclusive of applicable taxes. Payment is processed by Stripe, Inc. By making a purchase you also agree to <a href="https://stripe.com/legal/ssa" target="_blank" rel="noopener">Stripe's Terms of Service</a>.</p>
+    </div>
+
+    <div class="doc-section" id="refunds">
+      <h2><span class="sec-num">05</span> Refund policy</h2>
+      <p>Due to the nature of digital goods delivered instantly, all credit purchases are <strong>final and non-refundable</strong>, except in the following circumstances:</p>
+      <ul>
+        <li>A technical failure on our part prevented you from using purchased credits.</li>
+        <li>A duplicate charge occurred due to a payment processing error.</li>
+        <li>You are entitled to a refund under applicable consumer protection law in your jurisdiction (e.g. EU 14-day right of withdrawal for distance contracts, where applicable).</li>
+      </ul>
+      <p>To request a refund under one of the above circumstances, contact us within 30 days of the purchase with your anonymous user ID and proof of payment. We will evaluate requests on a case-by-case basis.</p>
+      <div class="warn-box">
+        <p><strong>Note:</strong> Credits that have already been consumed (used to edit PDFs) are not eligible for refund regardless of circumstance.</p>
+      </div>
+    </div>
+
+    <div class="doc-section" id="acceptable-use">
+      <h2><span class="sec-num">06</span> Acceptable use</h2>
+      <p>You agree not to use Folio PDF Studio to:</p>
+      <ul>
+        <li>Create, edit or distribute fraudulent documents, including forged signatures, falsified contracts or counterfeit identity documents.</li>
+        <li>Infringe upon the copyright, trademark or intellectual property rights of any third party.</li>
+        <li>Circumvent, disable or otherwise interfere with the credit verification system.</li>
+        <li>Reverse-engineer, decompile or attempt to extract the source code of the Extension beyond what is permitted by applicable law.</li>
+        <li>Use the Extension for any purpose that is illegal under applicable local, national or international law.</li>
+        <li>Harass, harm or threaten any individual or group.</li>
+        <li>Spread malware, ransomware or any malicious code via PDF documents processed by the Extension.</li>
+      </ul>
+      <p>We reserve the right to terminate access for any user who violates these acceptable use provisions.</p>
+    </div>
+
+    <div class="doc-section" id="intellectual-property">
+      <h2><span class="sec-num">07</span> Intellectual property</h2>
+      <p>The Folio PDF Studio extension, including its source code, design, branding, and all associated materials, is the intellectual property of the operator. All rights are reserved.</p>
+      <p>You retain full ownership of any PDF documents you create or modify using the Extension. We make no claim to the contents of documents you process.</p>
+      <p>The Extension incorporates open-source libraries (PDF.js, pdf-lib, docx.js and others). These libraries are used under their respective open-source licences, which are available in the Extension's source code.</p>
+    </div>
+
+    <div class="doc-section" id="disclaimer">
+      <h2><span class="sec-num">08</span> Disclaimer of warranties</h2>
+      <p>The Extension is provided "as is" and "as available" without any warranties of any kind, either express or implied, including but not limited to:</p>
+      <ul>
+        <li>Warranties of merchantability or fitness for a particular purpose.</li>
+        <li>Warranties that the Extension will be error-free, uninterrupted or free of viruses.</li>
+        <li>Warranties regarding the accuracy or completeness of any output produced by the Extension.</li>
+      </ul>
+      <div class="warn-box">
+        <p><strong>Important:</strong> PDF text editing involves complex document processing. Results may vary depending on the structure of your PDF. Always keep a backup of original documents before editing.</p>
+      </div>
+    </div>
+
+    <div class="doc-section" id="limitation">
+      <h2><span class="sec-num">09</span> Limitation of liability</h2>
+      <p>To the fullest extent permitted by applicable law, Folio PDF Studio and its operator shall not be liable for any indirect, incidental, special, consequential or punitive damages, including but not limited to:</p>
+      <ul>
+        <li>Loss of data or corruption of PDF documents.</li>
+        <li>Loss of profits or business opportunities.</li>
+        <li>Costs of substitute products or services.</li>
+        <li>Any damages arising from your reliance on the Extension for professional, legal or medical purposes.</li>
+      </ul>
+      <p>In any case, our total liability to you for any claim arising from your use of the service shall not exceed the total amount you have paid to us in the 12 months preceding the claim.</p>
+    </div>
+
+    <div class="doc-section" id="termination">
+      <h2><span class="sec-num">10</span> Termination</h2>
+      <p>You may stop using the Extension at any time by uninstalling it from Chrome. Uninstalling the Extension will delete your local data, including your anonymous user ID. Any unused credits associated with that ID will be lost and are not refundable.</p>
+      <p>We may terminate or suspend your access to the credit system if we detect abuse of the free trial, circumvention of the payment system, or violation of these Terms.</p>
+    </div>
+
+    <div class="doc-section" id="governing-law">
+      <h2><span class="sec-num">11</span> Governing law</h2>
+      <p>These Terms are governed by and construed in accordance with the laws of Switzerland, without regard to its conflict of law provisions. Any dispute arising out of or in connection with these Terms shall be subject to the exclusive jurisdiction of the courts of Switzerland.</p>
+      <p>If you are a consumer located in the European Union, you may also benefit from any mandatory provisions of the consumer protection laws of your country of residence.</p>
+    </div>
+
+    <div class="doc-section" id="changes">
+      <h2><span class="sec-num">12</span> Changes to terms</h2>
+      <p>We reserve the right to modify these Terms at any time. Material changes will be indicated by an updated "Last updated" date at the top of this page. We encourage you to review these Terms periodically.</p>
+      <p>Continued use of the Extension after changes are posted constitutes your acceptance of the revised Terms. If you do not agree with the changes, you should stop using the Extension.</p>
+    </div>
+
+    <div class="doc-section" id="contact">
+      <h2><span class="sec-num">13</span> Contact</h2>
+      <p>For any questions about these Terms of Service, please contact us at:</p>
+      <div class="highlight-box">
+        <p><strong>Email:</strong> <a href="mailto:legal@folio-pdf.app">legal@folio-pdf.app</a><br>
+        We aim to respond within 5 business days.</p>
+      </div>
+    </div>
+
+    <div class="doc-footer">
+      <span class="doc-footer-copy">© 2025 Folio PDF Studio</span>
+      <div class="doc-footer-links">
+        <a href="/">Home</a>
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="/terms.html">Terms of Service</a>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>
