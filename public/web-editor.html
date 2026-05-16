@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Folio PDF Editor — Edit, Sign & Convert PDFs Online</title>
+  <meta name="description" content="Free online PDF editor. Edit text, sign, merge, split, annotate and convert PDFs directly in your browser. No upload, no account needed.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://folio-pdf.vercel.app/web-editor.html">
+
+  <!-- PDF.js from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <!-- pdf-lib from CDN -->
+  <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <!-- fontkit from CDN -->
+  <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+
+    :root {
+      --bg: #0c0c0f;
+      --bg2: #111115;
+      --bg3: #18181d;
+      --bg4: #1f1f26;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --accent: #e8ff47;
+      --accent2: #7b61ff;
+      --text: #f0f0f0;
+      --text2: #a0a0b0;
+      --muted: #555565;
+      --danger: #ff4757;
+      --success: #2ed573;
+      --warn: #ffa502;
+      --sidebar: 290px;
+      --topbar: 56px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── TOP BAR ── */
+    .topbar {
+      height: var(--topbar);
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 8px;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+
+    .topbar-logo {
+      display: flex; align-items: center; gap: 7px;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 15px;
+      letter-spacing: -0.3px; text-decoration: none; color: var(--text);
+      margin-right: 4px;
+    }
+
+    .topbar-logo-dot {
+      width: 24px; height: 24px; background: var(--accent); border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 900; color: #0c0c0f;
+    }
+
+    .topbar-sep { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+
+    .mode-tabs {
+      display: flex; gap: 2px; background: var(--bg3); border-radius: 10px;
+      padding: 3px; border: 1px solid var(--border);
+    }
+
+    .mode-tab {
+      padding: 5px 11px; border-radius: 7px; border: none;
+      background: transparent; color: var(--text2);
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 11px;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .mode-tab.active { background: var(--bg4); color: var(--text); border: 1px solid var(--border2); }
+    .mode-tab:hover:not(.active) { color: var(--text); }
+
+    .topbar-spacer { flex: 1; }
+
+    .page-nav {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 9px; padding: 5px 10px;
+      font-size: 12px; color: var(--text2);
+    }
+    .page-nav button {
+      background: none; border: none; cursor: pointer;
+      color: var(--text2); padding: 2px 4px; border-radius: 4px;
+      transition: color 0.15s; font-size: 14px;
+    }
+    .page-nav button:hover { color: var(--accent); }
+    .page-num { font-family: 'Syne', sans-serif; font-weight: 600; color: var(--text); }
+
+    .zoom-ctrl {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 9px; padding: 5px 9px;
+    }
+    .zoom-ctrl button {
+      background: none; border: none; color: var(--text2);
+      cursor: pointer; font-size: 16px; line-height: 1;
+      padding: 0 2px; transition: color 0.15s;
+    }
+    .zoom-ctrl button:hover { color: var(--accent); }
+    .zoom-val {
+      font-size: 11px; font-family: 'Syne', sans-serif; font-weight: 600;
+      color: var(--text); min-width: 36px; text-align: center;
+    }
+
+    .btn-upload-top {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bg3); border: 1px solid var(--border2);
+      color: var(--text2); border-radius: 9px; padding: 7px 14px;
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 11px;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .btn-upload-top:hover { background: var(--bg4); color: var(--text); }
+
+    .btn-export {
+      background: var(--accent); color: #0c0c0f; border: none;
+      border-radius: 9px; padding: 8px 16px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px;
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-export:hover { background: #f5ff6e; box-shadow: 0 4px 18px rgba(232,255,71,0.3); }
+    .btn-export:disabled { opacity: 0.4; pointer-events: none; }
+
+    .credits-pill {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 11px; color: var(--text2); cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .credits-pill:hover { border-color: var(--border2); }
+    .credits-pill .c-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success); flex-shrink: 0;
+    }
+    .credits-pill span { font-family: 'Syne', sans-serif; font-weight: 600; }
+
+    /* ── MAIN LAYOUT ── */
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: var(--sidebar); background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; flex-shrink: 0; overflow-y: auto;
+    }
+    .sidebar::-webkit-scrollbar { width: 3px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+    .sidebar-section { padding: 14px 14px 12px; border-bottom: 1px solid var(--border); }
+
+    .sidebar-title {
+      font-size: 9px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+    }
+
+    .block-list { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+    .block-list::-webkit-scrollbar { width: 3px; }
+    .block-list::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+    .block-item {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 10px; cursor: pointer;
+      transition: all 0.15s; font-size: 11px;
+    }
+    .block-item:hover { border-color: var(--border2); background: var(--bg4); }
+    .block-item.selected { border-color: var(--accent); background: rgba(232,255,71,0.07); }
+    .block-preview {
+      color: var(--text); font-size: 11px; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;
+    }
+    .block-meta { color: var(--muted); font-size: 9px; }
+
+    .mod-badge {
+      display: inline-flex; background: rgba(232,255,71,0.15);
+      color: var(--accent); font-size: 9px; font-weight: 700;
+      padding: 1px 5px; border-radius: 4px; margin-left: 4px; vertical-align: middle;
+    }
+
+    /* PROPS PANEL */
+    .prop-row { margin-bottom: 10px; }
+    .prop-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+    .prop-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+
+    .prop-input {
+      width: 100%; background: var(--bg4); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 8px; color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 12px; outline: none;
+      transition: border-color 0.15s;
+    }
+    .prop-input:focus { border-color: var(--border2); }
+
+    .prop-select {
+      width: 100%; background: var(--bg4); border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 8px; color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 12px; outline: none;
+      cursor: pointer;
+    }
+
+    .color-swatch {
+      background: var(--bg4); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px; display: flex; align-items: center;
+    }
+    .color-swatch input[type="color"] {
+      width: 100%; height: 24px; border: none; background: none;
+      cursor: pointer; border-radius: 3px;
+    }
+
+    .apply-btn {
+      width: 100%; margin-top: 12px; padding: 9px;
+      background: var(--accent); color: #0c0c0f; border: none;
+      border-radius: 8px; font-family: 'Syne', sans-serif;
+      font-weight: 700; font-size: 12px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .apply-btn:hover { background: #f5ff6e; }
+    .apply-btn:disabled { opacity: 0.4; pointer-events: none; }
+
+    .sb-pad { padding: 14px; }
+
+    /* SIGN */
+    .sig-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+    .sig-tab {
+      flex: 1; text-align: center; padding: 6px 4px;
+      background: var(--bg4); border: 1px solid var(--border);
+      border-radius: 7px; cursor: pointer; font-size: 10px;
+      color: var(--text2); transition: all 0.15s;
+    }
+    .sig-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,71,0.08); }
+
+    #sigCanvas {
+      width: 100%; height: 100px; background: #fff;
+      border-radius: 8px; cursor: crosshair; border: 1px solid var(--border);
+    }
+
+    .sig-actions { display: flex; gap: 6px; margin-top: 8px; }
+    .sig-btn {
+      flex: 1; padding: 7px; background: var(--bg4); border: 1px solid var(--border);
+      border-radius: 7px; color: var(--text2); font-family: 'Syne', sans-serif;
+      font-weight: 600; font-size: 11px; cursor: pointer; transition: all 0.15s;
+    }
+    .sig-btn:hover { background: var(--bg3); color: var(--text); }
+    .sig-btn.primary { background: rgba(232,255,71,0.15); border-color: rgba(232,255,71,0.3); color: var(--accent); }
+    .sig-btn.primary:hover { background: rgba(232,255,71,0.25); }
+
+    /* MERGE / EXTRACT */
+    .merge-drop {
+      border: 1.5px dashed rgba(232,255,71,0.2); border-radius: 10px;
+      padding: 16px; text-align: center; cursor: pointer;
+      transition: all 0.2s; margin-bottom: 10px;
+    }
+    .merge-drop:hover { border-color: rgba(232,255,71,0.5); background: rgba(232,255,71,0.04); }
+
+    .merge-list { display: flex; flex-direction: column; gap: 4px; }
+    .merge-file {
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 7px; padding: 7px 10px; font-size: 11px;
+      display: flex; align-items: center; gap: 8px; color: var(--text2);
+    }
+
+    .thumb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .thumb-item {
+      background: var(--bg4); border: 2px solid var(--border);
+      border-radius: 6px; padding: 4px; cursor: pointer;
+      transition: border-color 0.15s; text-align: center;
+    }
+    .thumb-item.selected { border-color: var(--accent); }
+    .thumb-item canvas { width: 100%; display: block; border-radius: 3px; }
+    .thumb-item .thumb-num { font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+    /* FORMAT GRID */
+    .format-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+    .fmt-card {
+      background: var(--bg4); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 6px; text-align: center;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .fmt-card:hover, .fmt-card.active { border-color: var(--accent); background: rgba(232,255,71,0.08); }
+    .fmt-icon { font-size: 16px; margin-bottom: 4px; }
+    .fmt-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 10px; color: var(--text); }
+    .fmt-desc { font-size: 9px; color: var(--muted); margin-top: 1px; }
+
+    .big-convert-btn {
+      width: 100%; padding: 10px; background: linear-gradient(135deg, var(--accent2), #a855f7);
+      color: white; border: none; border-radius: 8px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px;
+      cursor: pointer; transition: all 0.2s; margin-top: 8px;
+    }
+    .big-convert-btn:hover { opacity: 0.9; box-shadow: 0 4px 20px rgba(123,97,255,0.3); }
+
+    .progress-bar-wrap {
+      height: 4px; background: var(--bg4); border-radius: 2px;
+      margin-top: 10px; overflow: hidden; display: none;
+    }
+    .progress-bar-fill {
+      height: 100%; width: 0; background: var(--accent); border-radius: 2px;
+      transition: width 0.3s;
+    }
+
+    /* ── CANVAS AREA ── */
+    .canvas-area {
+      flex: 1; overflow: auto; background: var(--bg);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 24px;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .canvas-area::-webkit-scrollbar { width: 6px; height: 6px; }
+    .canvas-area::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 3px; }
+
+    /* Empty state */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; text-align: center; padding: 80px 40px; margin: auto;
+    }
+    .empty-state-inner {
+      background: var(--bg2); border: 1.5px dashed rgba(232,255,71,0.2);
+      border-radius: 20px; padding: 56px 48px; max-width: 440px; width: 100%;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .empty-state-inner.drag-over {
+      border-color: var(--accent); background: rgba(232,255,71,0.05);
+    }
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+    .empty-title {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 20px;
+      color: var(--text); margin-bottom: 8px;
+    }
+    .empty-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; line-height: 1.6; }
+
+    .upload-big {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #0c0c0f; border: none;
+      border-radius: 10px; padding: 12px 24px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .upload-big:hover { background: #f5ff6e; transform: translateY(-1px); }
+
+    .upload-url-row {
+      display: flex; gap: 8px; margin-top: 14px;
+    }
+    .upload-url-input {
+      flex: 1; background: var(--bg4); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 12px; color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 12px; outline: none;
+    }
+    .upload-url-input:focus { border-color: var(--border2); }
+    .upload-url-btn {
+      background: var(--bg4); border: 1px solid var(--border2);
+      color: var(--text2); border-radius: 8px; padding: 9px 14px;
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 11px;
+      cursor: pointer; white-space: nowrap; transition: all 0.15s;
+    }
+    .upload-url-btn:hover { background: var(--bg3); color: var(--text); }
+
+    /* PDF page wrap */
+    .pdf-page-wrap {
+      position: relative; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+      border-radius: 4px; overflow: visible; flex-shrink: 0;
+    }
+    .pdf-page-wrap.hidden { display: none; }
+
+    #pdfCanvas { display: block; border-radius: 4px; }
+
+    /* Block overlays */
+    .block-overlay {
+      position: absolute; border: 1.5px solid transparent;
+      cursor: pointer; transition: border-color 0.15s;
+      box-sizing: border-box; border-radius: 3px;
+    }
+    .block-overlay:hover { border-color: rgba(232,255,71,0.5); background: rgba(232,255,71,0.05); }
+    .block-overlay.selected { border-color: var(--accent); background: rgba(232,255,71,0.08); }
+
+    /* Signature overlay */
+    .sig-overlay {
+      position: absolute; cursor: move; user-select: none;
+      border: 1.5px dashed rgba(255,255,255,0.3);
+    }
+    .sig-overlay img { width: 100%; height: 100%; display: block; pointer-events: none; }
+    .sig-resize {
+      position: absolute; bottom: -5px; right: -5px;
+      width: 12px; height: 12px; background: var(--accent);
+      border-radius: 2px; cursor: se-resize;
+    }
+    .sig-delete {
+      position: absolute; top: -8px; right: -8px;
+      width: 16px; height: 16px; background: var(--danger);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 10px; color: white; line-height: 1;
+    }
+
+    /* Annotation overlay */
+    .annot-layer {
+      position: absolute; inset: 0;
+      pointer-events: none;
+    }
+    #annotDrawCanvas {
+      position: absolute; inset: 0;
+      pointer-events: none;
+    }
+    #annotDrawCanvas.active { pointer-events: all; cursor: crosshair; }
+
+    /* Loading overlay */
+    .loading-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(12,12,15,0.85); backdrop-filter: blur(6px);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    .loading-overlay.hidden { display: none; }
+    .loading-spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-family: 'Syne', sans-serif; font-weight: 600; color: var(--text2); font-size: 14px; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(60px);
+      background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 10px; padding: 11px 20px; font-size: 13px; color: var(--text);
+      opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); z-index: 9000;
+      white-space: nowrap; pointer-events: none;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast.success { border-color: rgba(46,213,115,0.3); }
+    .toast.error   { border-color: rgba(255,71,87,0.3); }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- LOADING -->
+  <div class="loading-overlay hidden" id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loadingText">Loading…</div>
+  </div>
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <a href="/" class="topbar-logo">
+      <div class="topbar-logo-dot">F</div>
+      Folio
+    </a>
+    <div class="topbar-sep"></div>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="edit">✏️ Edit</button>
+      <button class="mode-tab" data-mode="sign">✍️ Sign</button>
+      <button class="mode-tab" data-mode="merge">🗂️ Merge</button>
+      <button class="mode-tab" data-mode="extract">✂️ Extract</button>
+      <button class="mode-tab" data-mode="annotate">🖍️ Annotate</button>
+      <button class="mode-tab" data-mode="convert">⚡ Convert</button>
+    </div>
+
+    <div class="topbar-spacer"></div>
+
+    <div class="page-nav" id="pageNav" style="display:none;">
+      <button id="prevPage">‹</button>
+      <span class="page-num" id="pageNum">1</span>
+      <span>/</span>
+      <span id="totalPagesSpan">1</span>
+      <button id="nextPage">›</button>
+    </div>
+
+    <div class="zoom-ctrl" id="zoomCtrl" style="display:none;">
+      <button id="zoomOut">−</button>
+      <span class="zoom-val" id="zoomVal">100%</span>
+      <button id="zoomIn">+</button>
+    </div>
+
+    <button class="btn-upload-top" id="btnUploadTop" onclick="document.getElementById('mainFileInput').click()">
+      📁 Open PDF
+    </button>
+    <input type="file" id="mainFileInput" accept=".pdf" style="display:none">
+
+    <div class="credits-pill" id="creditsPill" title="Click to buy credits">
+      <div class="c-dot"></div>
+      <span id="creditsCount">—</span> credits
+    </div>
+
+    <button class="btn-export" id="btnExport" disabled>
+      ↓ Export PDF
+    </button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+
+      <!-- EDIT sidebar -->
+      <div id="sidebarEdit">
+        <div class="sidebar-section">
+          <div class="sidebar-title">Text blocks <span class="mod-badge hidden" id="modBadge">modified</span></div>
+          <div class="block-list" id="blockList">
+            <div style="color:var(--muted);font-size:11px;padding:8px 4px;">Open a PDF to see text blocks</div>
+          </div>
+        </div>
+        <div class="sidebar-section" id="propPanel" style="display:none;">
+          <div class="sidebar-title">Properties</div>
+          <div class="prop-row">
+            <div class="prop-label">Text content</div>
+            <textarea class="prop-input" id="propText" rows="3" style="resize:vertical;"></textarea>
+          </div>
+          <div class="prop-row-2">
+            <div>
+              <div class="prop-label">Font</div>
+              <select class="prop-select" id="propFont">
+                <option value="Helvetica">Helvetica</option>
+                <option value="Times-Roman">Times Roman</option>
+                <option value="Courier">Courier</option>
+              </select>
+            </div>
+            <div>
+              <div class="prop-label">Size (pt)</div>
+              <input class="prop-input" id="propSize" type="number" value="12" min="4" max="200" step="0.5">
+            </div>
+          </div>
+          <div class="prop-row-2">
+            <div>
+              <div class="prop-label">Text color</div>
+              <div class="color-swatch"><input type="color" id="propColor" value="#000000"></div>
+            </div>
+            <div>
+              <div class="prop-label">Background</div>
+              <div class="color-swatch"><input type="color" id="propBgColor" value="#ffffff"></div>
+            </div>
+          </div>
+          <div class="prop-row-2">
+            <div>
+              <div class="prop-label">BG opacity</div>
+              <input class="prop-input" id="propBgOpacity" type="number" value="0" min="0" max="1" step="0.1">
+            </div>
+            <div>
+              <div class="prop-label">Rotation (°)</div>
+              <input class="prop-input" id="propRotation" type="number" value="0" min="-360" max="360" step="1">
+            </div>
+          </div>
+          <button class="apply-btn" id="applyProps" disabled>✓ Apply to PDF</button>
+        </div>
+      </div>
+
+      <!-- SIGN sidebar -->
+      <div id="sidebarSign" class="hidden">
+        <div class="sidebar-section">
+          <div class="sidebar-title">Signature</div>
+          <div class="sig-tabs">
+            <div class="sig-tab active" data-sig="draw">✏️ Draw</div>
+            <div class="sig-tab" data-sig="text">Aa Text</div>
+            <div class="sig-tab" data-sig="image">🖼 Image</div>
+          </div>
+
+          <div id="sigDraw">
+            <canvas id="sigCanvas"></canvas>
+            <div class="sig-actions">
+              <button class="sig-btn" id="sigClear">Clear</button>
+              <button class="sig-btn primary" id="sigApply">Place ↓</button>
+            </div>
+          </div>
+
+          <div id="sigText" class="hidden">
+            <div class="prop-row">
+              <div class="prop-label">Your name</div>
+              <input class="prop-input" id="sigTextInput" type="text" placeholder="John Doe">
+            </div>
+            <div class="prop-row">
+              <div class="prop-label">Style</div>
+              <select class="prop-select" id="sigTextFont">
+                <option value="cursive">Cursive script</option>
+                <option value="Georgia, serif">Classic serif</option>
+                <option value="'Syne', sans-serif">Modern</option>
+                <option value="'Courier New', monospace">Monospace</option>
+              </select>
+            </div>
+            <div class="prop-row">
+              <div class="prop-label">Color</div>
+              <div class="color-swatch"><input type="color" id="sigTextColor" value="#003380"></div>
+            </div>
+            <button class="sig-btn primary" id="sigTextApply" style="width:100%;margin-top:4px;">Place signature</button>
+          </div>
+
+          <div id="sigImage" class="hidden">
+            <div class="merge-drop" id="sigImgDrop" style="border-color:rgba(123,97,255,0.3);">
+              <div style="font-size:22px;margin-bottom:5px;">🖼</div>
+              <div style="font-size:11px;color:var(--text2);">Click to choose an image</div>
+            </div>
+            <input type="file" id="sigImgInput" accept="image/*" style="display:none">
+            <button class="sig-btn primary" id="sigImgApply" style="width:100%;">↺ Replace image</button>
+          </div>
+        </div>
+        <div class="sb-pad" style="font-size:10px;color:var(--muted);line-height:1.6;">
+          Drag the signature on the PDF to position it. It will be embedded on export.
+        </div>
+      </div>
+
+      <!-- ANNOTATE sidebar -->
+      <div id="sidebarAnnotate" class="hidden">
+        <div class="sidebar-section">
+          <div class="sidebar-title">Annotation</div>
+          <div class="prop-row">
+            <div class="prop-label">Highlight color</div>
+            <div class="color-swatch"><input type="color" id="annotColor" value="#e8ff47"></div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-label">Opacity</div>
+            <input class="prop-input" id="annotOpacity" type="range" min="0.1" max="1" step="0.05" value="0.35" style="padding:10px 0;">
+          </div>
+          <button class="apply-btn" id="btnAnnotateClear" style="background:rgba(255,71,87,0.15);border:1px solid rgba(255,71,87,0.3);color:var(--danger);">
+            Clear annotations
+          </button>
+        </div>
+        <div class="sb-pad" style="font-size:10px;color:var(--muted);line-height:1.6;">
+          Draw on the PDF to highlight areas.
+        </div>
+      </div>
+
+      <!-- EXTRACT sidebar -->
+      <div id="sidebarExtract" class="hidden">
+        <div class="sidebar-section">
+          <div class="sidebar-title">Pages to extract</div>
+          <div class="thumb-grid" id="thumbGrid"></div>
+        </div>
+        <div class="sb-pad">
+          <button class="apply-btn" id="btnExtractDo">Extract selected pages</button>
+        </div>
+      </div>
+
+      <!-- MERGE sidebar -->
+      <div id="sidebarMerge" class="hidden">
+        <div class="sidebar-section">
+          <div class="sidebar-title">PDFs to merge</div>
+          <div style="font-size:10px;color:var(--text2);margin-bottom:8px;line-height:1.5;">
+            The current PDF is added automatically. Add more files to merge.
+          </div>
+          <div class="merge-drop" id="mergeDropZone">
+            <div style="font-size:20px;margin-bottom:5px;">📁</div>
+            <div style="font-size:11px;color:var(--text2);">Click or drag PDFs here</div>
+          </div>
+          <input type="file" id="mergeInput" multiple accept=".pdf" style="display:none">
+          <div class="merge-list" id="mergeList"></div>
+        </div>
+        <div class="sb-pad">
+          <button class="apply-btn" id="btnMergeDo">Merge into one PDF</button>
+        </div>
+      </div>
+
+      <!-- CONVERT sidebar -->
+      <div id="sidebarConvert" class="hidden">
+        <div class="sidebar-section">
+          <div class="sidebar-title">Output format</div>
+          <div class="format-grid">
+            <div class="fmt-card active" data-fmt="jpg"><div class="fmt-icon">🖼</div><div class="fmt-name">JPG</div><div class="fmt-desc">Image</div></div>
+            <div class="fmt-card" data-fmt="png"><div class="fmt-icon">🖼</div><div class="fmt-name">PNG</div><div class="fmt-desc">Transparent</div></div>
+            <div class="fmt-card" data-fmt="txt"><div class="fmt-icon">📄</div><div class="fmt-name">TXT</div><div class="fmt-desc">Plain text</div></div>
+            <div class="fmt-card" data-fmt="html"><div class="fmt-icon">🌐</div><div class="fmt-name">HTML</div><div class="fmt-desc">Web</div></div>
+            <div class="fmt-card" data-fmt="docx"><div class="fmt-icon">📝</div><div class="fmt-name">WORD</div><div class="fmt-desc">.docx</div></div>
+            <div class="fmt-card" data-fmt="csv"><div class="fmt-icon">📊</div><div class="fmt-name">CSV</div><div class="fmt-desc">Table</div></div>
+          </div>
+          <div class="prop-row">
+            <div class="prop-label">Pages</div>
+            <select class="prop-select" id="convertPages">
+              <option value="all">All pages</option>
+              <option value="current">Current page</option>
+              <option value="range">Custom range</option>
+            </select>
+          </div>
+          <div class="prop-row" id="pageRangeRow" style="display:none;">
+            <div class="prop-label">e.g. 1-3, 5, 7-9</div>
+            <input class="prop-input" id="pageRangeInput" type="text" placeholder="1-3, 5">
+          </div>
+          <button class="big-convert-btn" id="btnConvertDo">Convert PDF</button>
+          <div class="progress-bar-wrap" id="convertProgress">
+            <div class="progress-bar-fill" id="convertBar"></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /sidebar -->
+
+    <!-- CANVAS AREA -->
+    <div class="canvas-area" id="canvasArea">
+
+      <!-- Empty state / drop zone -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-state-inner" id="emptyInner">
+          <div class="empty-icon">📄</div>
+          <div class="empty-title">Open a PDF to start</div>
+          <div class="empty-sub">
+            Drag & drop a PDF here, browse your files,<br>or load from a URL.
+          </div>
+          <button class="upload-big" onclick="document.getElementById('mainFileInput').click()">
+            📁 Browse files
+          </button>
+          <div class="upload-url-row">
+            <input class="upload-url-input" id="urlInput" type="url" placeholder="https://example.com/file.pdf">
+            <button class="upload-url-btn" id="btnLoadUrl">Load URL</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PDF page -->
+      <div class="pdf-page-wrap hidden" id="pdfPageWrap">
+        <canvas id="pdfCanvas"></canvas>
+        <!-- Block overlays, sig overlays and annotation layer injected here dynamically -->
+      </div>
+
+    </div>
+
+  </div><!-- /main -->
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Web Payment (no chrome API) -->
+  <script src="web-payment.js"></script>
+
+  <script src="web-editor.js"></script>
+</body>
+</html>
