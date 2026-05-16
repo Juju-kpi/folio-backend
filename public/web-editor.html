@@ -743,10 +743,10 @@
   <!-- TOAST -->
   <div class="toast" id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js"></script>
+  <!-- docx export — MUST load before web-editor.js -->
+  <script src="../lib/docx.iife.js"></script>
   <!-- Web Payment (no chrome API) -->
   <script src="web-payment.js"></script>
-
   <script src="web-editor.js"></script>
 </body>
 </html>

@@ -1183,7 +1183,9 @@ $('btnConvertDo').addEventListener('click', async () => {
 
     } else if (convertFmt === 'docx') {
 
-  const { Document, Packer, Paragraph, TextRun, PageBreak, AlignmentType } = docx;
+  // docx 8.x UMD exposes window.docx
+  if (typeof docx === 'undefined') throw new Error('docx lib not loaded — check the <script> tag in web-editor.html');
+  const { Document, Packer, Paragraph, TextRun, ImageRun, PageBreak, AlignmentType } = docx;
   const children = [];
 
   for (let i = 0; i < pages.length; i++) {
@@ -1288,8 +1290,6 @@ $('btnConvertDo').addEventListener('click', async () => {
 
         try {
 
-          const { ImageRun } = docx;
-
           const b64 = sig.dataURL.split(',')[1];
 
           const bytes = base64ToBytes(b64);
@@ -1353,14 +1353,21 @@ $('btnConvertDo').addEventListener('click', async () => {
   });
 
   const blob = await Packer.toBlob(wordDoc);
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = fileName.replace('.pdf', '.docx');
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
 
-    } else {
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+
+  a.href = url;
+  a.download = 'folio_export.docx';
+
+  a.click();
+
+  setTimeout(() => URL.revokeObjectURL(url), 2000); 
+}
+    
+    
+    else {
       // Image: jpg / png
       const fmt = convertFmt === 'png' ? 'image/png' : 'image/jpeg';
       const ext = convertFmt === 'png' ? 'png' : 'jpg';
