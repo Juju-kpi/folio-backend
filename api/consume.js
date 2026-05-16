@@ -45,7 +45,7 @@ async function tryConsume(uid) {
   const getUrl =
     `${process.env.SUPABASE_URL}/rest/v1/users` +
     `?uid=eq.${uid}` +
-    `&select=uid,credits,free_used,lifetime_free`;
+    `&select=uid,credits,free_used,lifetime_free,edit_count`;
 
   const r = await fetch(getUrl, {
     headers: {
