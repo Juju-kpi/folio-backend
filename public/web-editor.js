@@ -488,7 +488,7 @@ async function buildModifiedPdfBytes() {
   if (typeof fontkit !== 'undefined') editDoc.registerFontkit(fontkit);
   const fontCache = {};
 
-  const FONT_MAP = {
+  const FONT_MAP_STD = {
     'Helvetica':             PDFLib.StandardFonts.Helvetica,
     'Helvetica-Bold':        PDFLib.StandardFonts.HelveticaBold,
     'Helvetica-Oblique':     PDFLib.StandardFonts.HelveticaOblique,
@@ -502,9 +502,62 @@ async function buildModifiedPdfBytes() {
     'Courier-Oblique':       PDFLib.StandardFonts.CourierOblique,
   };
 
+  const FONT_MAP_GF = {
+    'Inter':           'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2',
+    'Inter-Bold':      'https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuI6fAZ9hiJ-Ek-_EeA.woff2',
+    'Roboto':          'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Mu4mxKKTU1Kg.woff2',
+    'Roboto-Bold':     'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlfBBc4AMP6lQ.woff2',
+    'Roboto-Italic':   'https://fonts.gstatic.com/s/roboto/v30/KFOkCnqEu92Fr1Mu51xIIzIXKMny.woff2',
+    'OpenSans':        'https://fonts.gstatic.com/s/opensans/v40/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsjZ0B4gaVc.woff2',
+    'OpenSans-Bold':   'https://fonts.gstatic.com/s/opensans/v40/memSYaGs126MiZpBA-UvWbX2vVnXBbObj2OVZyOOSr4dVJWUgsg-1x4gaVc.woff2',
+    'Lato':            'https://fonts.gstatic.com/s/lato/v24/S6uyw4BMUTPHjx4wXiWtFCc.woff2',
+    'Lato-Bold':       'https://fonts.gstatic.com/s/lato/v24/S6u9w4BMUTPHh6UVSwiPGQ3q5d0.woff2',
+    'Montserrat':      'https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459WlhyyTh89Y.woff2',
+    'Montserrat-Bold': 'https://fonts.gstatic.com/s/montserrat/v26/JTUSjIg1_i6t8kCHKm459WdhyyTh89Y.woff2',
+    'Poppins':         'https://fonts.gstatic.com/s/poppins/v21/pxiEyp8kv8JHgFVrJJfecg.woff2',
+    'Poppins-Bold':    'https://fonts.gstatic.com/s/poppins/v21/pxiByp8kv8JHgFVrLCz7Z1xlFd2JQEk.woff2',
+    'Nunito':          'https://fonts.gstatic.com/s/nunito/v26/XRXI3I6Li01BKofiOc5wtlZ2di8HDFwmdTo3jQ.woff2',
+    'Raleway':         'https://fonts.gstatic.com/s/raleway/v34/1Ptug8zYS_SKggPNyC0ITw.woff2',
+    'Oswald':          'https://fonts.gstatic.com/s/oswald/v53/TK3_WkUHHAIjg75cFRf3bXL8LICs1_Fvsrm4.woff2',
+    'DMSans':          'https://fonts.gstatic.com/s/dmsans/v15/rP2Hp2ywxg089UriCZOIHTWEBlwu8Q.woff2',
+    'Merriweather':    'https://fonts.gstatic.com/s/merriweather/v30/u-440qyriQwlOrhSvowK_l5-fCZM.woff2',
+    'Merriweather-Bold':'https://fonts.gstatic.com/s/merriweather/v30/u-4n0qyriQwlOrhSvowK_l52xwNZWMf_.woff2',
+    'Playfair':        'https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKdFvXDXbtM.woff2',
+    'Playfair-Bold':   'https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKd3unDXbtM.woff2',
+    'Lora':            'https://fonts.gstatic.com/s/lora/v35/0QI6MX1D_JOxE7fSWoO4Iegx.woff2',
+    'Lora-Bold':       'https://fonts.gstatic.com/s/lora/v35/0QI6MX1D_JOxE7fSWoO4Iegx.woff2',
+    'PTSerif':         'https://fonts.gstatic.com/s/ptserif/v18/EJRVQgYoZZY2vCFuvAFWzr-_dSb_.woff2',
+    'CrimsonPro':      'https://fonts.gstatic.com/s/crimsonpro/v24/q5uUsoa5M_tv7IihmnkabC5XiXCAlXGks1WZTm18OJE_VNWoyQ.woff2',
+    'FiraCode':        'https://fonts.gstatic.com/s/firacode/v22/uU9eCBsR6Z2vfE9aq3bL0fxyUs4tcw4W_D1sJVD7MOzlojwUKaJhhvA.woff2',
+    'JetBrainsMono':   'https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjOVmNIAWMtBBGg5.woff2',
+    'SourceCodePro':   'https://fonts.gstatic.com/s/sourcecodepro/v23/HI_diYsKILxRpg3hIP6sJ7fM7PqlPevWnsUnxlC9.woff2',
+    'BebasNeue':       'https://fonts.gstatic.com/s/bebasneue/v14/JTUSjIg69CK48gW7PXoo9WlhyyTh89Y.woff2',
+    'Righteous':       'https://fonts.gstatic.com/s/righteous/v17/1cXxaUPXBpj2rGoU7C9mj3uEicG01A.woff2',
+    'Pacifico':        'https://fonts.gstatic.com/s/pacifico/v22/FwZY7-Qmy14u9lezJ96A4sijpFu_.woff2',
+    'Lobster':         'https://fonts.gstatic.com/s/lobster/v30/neILzCirqoswsqX9zoymM4MwWJU.woff2',
+    'GreatVibes':      'https://fonts.gstatic.com/s/greatvibes/v19/RWmMoKWR9v4ksMfaWd_JN9XFiaQ.woff2',
+    'DancingScript':   'https://fonts.gstatic.com/s/dancingscript/v25/If2cXTr6YS-zF4S-kcSWSVi_sxjsohD9F50Ruu7BMSo3ROp6.woff2',
+  };
+
   const getFont = async name => {
     if (fontCache[name]) return fontCache[name];
-    fontCache[name] = await editDoc.embedFont(FONT_MAP[name] || PDFLib.StandardFonts.Helvetica);
+    if (FONT_MAP_STD[name]) {
+      fontCache[name] = await editDoc.embedFont(FONT_MAP_STD[name]);
+      return fontCache[name];
+    }
+    const url = FONT_MAP_GF[name];
+    if (!url) {
+      fontCache[name] = await editDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+      return fontCache[name];
+    }
+    try {
+      const resp  = await fetch(url);
+      const bytes = await resp.arrayBuffer();
+      fontCache[name] = await editDoc.embedFont(bytes);
+    } catch(e) {
+      console.warn('[Folio] Font fetch failed for', name, '— fallback Helvetica', e);
+      fontCache[name] = await editDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+    }
     return fontCache[name];
   };
 
@@ -1481,9 +1534,39 @@ function buildCanvasFont(pdfFontName, sizePx) {
   const f      = (pdfFontName || '').toLowerCase();
   const bold   = f.includes('bold')                             ? 'bold '   : '';
   const italic = f.includes('oblique') || f.includes('italic') ? 'italic ' : '';
-  const family = f.includes('times')   ? 'Times New Roman, serif'
-               : f.includes('courier') ? 'Courier New, monospace'
-               : 'Helvetica, Arial, sans-serif';
+
+  const familyMap = {
+    'helvetica':      'Helvetica, Arial, sans-serif',
+    'inter':          'Inter, Helvetica, sans-serif',
+    'roboto':         'Roboto, Helvetica, sans-serif',
+    'opensans':       '"Open Sans", Helvetica, sans-serif',
+    'lato':           'Lato, Helvetica, sans-serif',
+    'montserrat':     'Montserrat, Helvetica, sans-serif',
+    'poppins':        'Poppins, Helvetica, sans-serif',
+    'nunito':         'Nunito, Helvetica, sans-serif',
+    'raleway':        'Raleway, Helvetica, sans-serif',
+    'oswald':         'Oswald, Helvetica, sans-serif',
+    'dmsans':         '"DM Sans", Helvetica, sans-serif',
+    'times':          '"Times New Roman", Times, serif',
+    'merriweather':   'Merriweather, Georgia, serif',
+    'playfair':       '"Playfair Display", Georgia, serif',
+    'lora':           'Lora, Georgia, serif',
+    'ptserif':        '"PT Serif", Georgia, serif',
+    'crimsonpro':     '"Crimson Pro", Georgia, serif',
+    'courier':        '"Courier New", Courier, monospace',
+    'firacode':       '"Fira Code", "Courier New", monospace',
+    'jetbrainsmono':  '"JetBrains Mono", "Courier New", monospace',
+    'sourcecodepro':  '"Source Code Pro", "Courier New", monospace',
+    'bebasneue':      '"Bebas Neue", Impact, sans-serif',
+    'righteous':      'Righteous, Impact, sans-serif',
+    'pacifico':       'Pacifico, cursive',
+    'lobster':        'Lobster, cursive',
+    'greatvibes':     '"Great Vibes", cursive',
+    'dancingscript':  '"Dancing Script", cursive',
+  };
+
+  const key = f.replace(/[-_](bold|italic|oblique|roman|regular).*$/, '').trim();
+  const family = familyMap[key] || familyMap[f.split('-')[0]] || 'Helvetica, Arial, sans-serif';
   return `${italic}${bold}${Math.round(sizePx)}px ${family}`;
 }
 

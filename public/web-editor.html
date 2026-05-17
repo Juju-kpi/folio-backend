@@ -16,10 +16,10 @@
   <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=Inter:wght@400;700&family=Roboto:ital,wght@0,400;0,700;1,400&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Nunito:wght@400;700&family=Raleway:wght@400;700&family=Oswald:wght@400;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&family=PT+Serif:wght@400;700&family=Crimson+Pro:wght@400;700&family=Fira+Code:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Source+Code+Pro:wght@400;700&family=Bebas+Neue&family=Righteous&family=Pacifico&family=Lobster&family=Great+Vibes&family=Dancing+Script:wght@400;700&display=swap" rel="stylesheet">
 
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&family=Inter:wght@400;700&family=Roboto:ital,wght@0,400;0,700;1,400&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Nunito:wght@400;700&family=Raleway:wght@400;700&family=Oswald:wght@400;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Playfair+Display:wght@400;700&family=Lora:ital,wght@0,400;0,700;1,400&family=PT+Serif:wght@400;700&family=Crimson+Pro:wght@400;700&family=Fira+Code:wght@400;700&family=JetBrains+Mono:wght@400;700&family=Source+Code+Pro:wght@400;700&family=Bebas+Neue&family=Righteous&family=Pacifico&family=Lobster&family=Great+Vibes&family=Dancing+Script:wght@400;700&display=swap');
 
     :root {
       --bg: #0c0c0f;
@@ -538,9 +538,59 @@
             <div>
               <div class="prop-label">Font</div>
               <select class="prop-select" id="propFont">
-                <option value="Helvetica">Helvetica</option>
-                <option value="Times-Roman">Times Roman</option>
-                <option value="Courier">Courier</option>
+                <optgroup label="— Sans-Serif —">
+                  <option value="Helvetica">Helvetica</option>
+                  <option value="Helvetica-Bold">Helvetica Bold</option>
+                  <option value="Helvetica-Oblique">Helvetica Italic</option>
+                  <option value="Helvetica-BoldOblique">Helvetica Bold Italic</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Inter-Bold">Inter Bold</option>
+                  <option value="Roboto">Roboto</option>
+                  <option value="Roboto-Bold">Roboto Bold</option>
+                  <option value="Roboto-Italic">Roboto Italic</option>
+                  <option value="OpenSans">Open Sans</option>
+                  <option value="OpenSans-Bold">Open Sans Bold</option>
+                  <option value="Lato">Lato</option>
+                  <option value="Lato-Bold">Lato Bold</option>
+                  <option value="Montserrat">Montserrat</option>
+                  <option value="Montserrat-Bold">Montserrat Bold</option>
+                  <option value="Poppins">Poppins</option>
+                  <option value="Poppins-Bold">Poppins Bold</option>
+                  <option value="Nunito">Nunito</option>
+                  <option value="Raleway">Raleway</option>
+                  <option value="Oswald">Oswald</option>
+                  <option value="DMSans">DM Sans</option>
+                </optgroup>
+                <optgroup label="— Serif —">
+                  <option value="Times-Roman">Times Roman</option>
+                  <option value="Times-Bold">Times Bold</option>
+                  <option value="Times-Italic">Times Italic</option>
+                  <option value="Times-BoldItalic">Times Bold Italic</option>
+                  <option value="Merriweather">Merriweather</option>
+                  <option value="Merriweather-Bold">Merriweather Bold</option>
+                  <option value="Playfair">Playfair Display</option>
+                  <option value="Playfair-Bold">Playfair Display Bold</option>
+                  <option value="Lora">Lora</option>
+                  <option value="Lora-Bold">Lora Bold</option>
+                  <option value="PTSerif">PT Serif</option>
+                  <option value="CrimsonPro">Crimson Pro</option>
+                </optgroup>
+                <optgroup label="— Monospace —">
+                  <option value="Courier">Courier</option>
+                  <option value="Courier-Bold">Courier Bold</option>
+                  <option value="Courier-Oblique">Courier Italic</option>
+                  <option value="FiraCode">Fira Code</option>
+                  <option value="JetBrainsMono">JetBrains Mono</option>
+                  <option value="SourceCodePro">Source Code Pro</option>
+                </optgroup>
+                <optgroup label="— Display / Deco —">
+                  <option value="BebasNeue">Bebas Neue</option>
+                  <option value="Righteous">Righteous</option>
+                  <option value="Pacifico">Pacifico</option>
+                  <option value="Lobster">Lobster</option>
+                  <option value="GreatVibes">Great Vibes</option>
+                  <option value="DancingScript">Dancing Script</option>
+                </optgroup>
               </select>
             </div>
             <div>
