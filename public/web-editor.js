@@ -6,17 +6,14 @@
 
 'use strict';
 
-// ── Réception sécurisée de canEdit ───────────────────────────────────────────
-// Déclaré AVANT le chargement de web-payment.js (via l'ordre des <script>).
-// _canEdit est une variable locale → impossible à monkey-patcher depuis la console
-// (ni via WebPayment.canEdit, ni via _canEdit — variable non globale).
-// Défaut fail-closed : rien ne passe sans confirmation serveur.
-let _canEdit = async () => false;
-
-function __folioRegisterCanEdit(fn) {
-  _canEdit = fn;
-  delete window.__folioRegisterCanEdit;
-}
+// ── Récupération sécurisée de canEdit ────────────────────────────────────────
+// web-payment.js (chargé avant) stocke la vraie fonction sous une clé Symbol.
+const _canEdit = (() => {
+  const key = WebPayment._editKey;
+  const fn  = window[key];
+  delete window[key];
+  return fn || (async () => false);
+})();
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ── PDF.js worker ─────────────────────────────────────────────────────────────

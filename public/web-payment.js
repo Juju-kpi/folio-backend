@@ -255,12 +255,12 @@ const WebPayment = (() => {
     });
   }
 
-  // ── Injection sécurisée de canEdit dans web-editor.js ────────────────────
-  if (typeof __folioRegisterCanEdit === 'function') {
-    __folioRegisterCanEdit(canEdit);
-  }
+  // ── Injection sécurisée de canEdit ───────────────────────────────────────
+  const _editKey = Symbol('folioCanEdit');
+  window[_editKey] = canEdit;
+  WebPayment._editKey = _editKey;
 
   // ── API publique (canEdit intentionnellement absent) ──────────────────────
-  return { getStatus, openCheckout, getUID };
+  return { getStatus, openCheckout, getUID, _editKey };
 
 })();
