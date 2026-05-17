@@ -6,6 +6,19 @@
 
 'use strict';
 
+// ── Réception sécurisée de canEdit ───────────────────────────────────────────
+// Déclaré AVANT le chargement de web-payment.js (via l'ordre des <script>).
+// _canEdit est une variable locale → impossible à monkey-patcher depuis la console
+// (ni via WebPayment.canEdit, ni via _canEdit — variable non globale).
+// Défaut fail-closed : rien ne passe sans confirmation serveur.
+let _canEdit = async () => false;
+
+function __folioRegisterCanEdit(fn) {
+  _canEdit = fn;
+  delete window.__folioRegisterCanEdit;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 // ── PDF.js worker ─────────────────────────────────────────────────────────────
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -424,7 +437,7 @@ function selectBlock(id) {
 $('applyProps').addEventListener('click', async () => {
   if (!selectedBlock) { webEditorToast('Select a text block first', 'error'); return; }
 
-  const allowed = await WebPayment.canEdit();
+  const allowed = await _canEdit();
   if (!allowed) return;
 
   selectedBlock.text      = $('propText').value;
@@ -813,7 +826,7 @@ $('sigClear').addEventListener('click', () => {
 
 $('sigApply').addEventListener('click', async () => {
   if (!sigCanvas || !pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
-  const allowed = await WebPayment.canEdit();
+  const allowed = await _canEdit();
   if (!allowed) return;
   placeSigOnPDF(sigCanvas.toDataURL('image/png'));
   updateCreditsDisplay();
@@ -823,7 +836,7 @@ $('sigTextApply').addEventListener('click', async () => {
   const name = $('sigTextInput').value.trim();
   if (!name)   { webEditorToast('Enter your name', 'error'); return; }
   if (!pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
-  const allowed = await WebPayment.canEdit();
+  const allowed = await _canEdit();
   if (!allowed) return;
 
   const c = document.createElement('canvas');
@@ -841,7 +854,7 @@ $('sigImgInput').addEventListener('change', async e => {
   const f = e.target.files[0];
   if (!f) return;
   if (!pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
-  const allowed = await WebPayment.canEdit();
+  const allowed = await _canEdit();
   if (!allowed) { e.target.value = ''; return; }
   const r = new FileReader();
   r.onload = ev => { sigImgData = ev.target.result; placeSigOnPDF(sigImgData); };
@@ -852,7 +865,7 @@ $('sigImgInput').addEventListener('change', async e => {
 $('sigImgApply').addEventListener('click', async () => {
   if (!sigImgData) { webEditorToast('Choose an image first', 'error'); return; }
   if (!pdfDoc)     { webEditorToast('Open a PDF first', 'error');    return; }
-  const allowed = await WebPayment.canEdit();
+  const allowed = await _canEdit();
   if (!allowed) return;
   placeSigOnPDF(sigImgData);
   updateCreditsDisplay();
@@ -1076,7 +1089,7 @@ async function buildThumbnails() {
 // ── Extract ───────────────────────────────────────────────────────────────────
 $('btnExtractDo').addEventListener('click', async () => {
   if (!selExtract.size) { webEditorToast('Select at least one page', 'error'); return; }
-  const allowed = await WebPayment.canEdit();
+  const allowed = await _canEdit();
   if (!allowed) return;
   showLoading('Extracting pages…');
   try {
@@ -1141,7 +1154,7 @@ $('btnMergeDo').addEventListener('click', async () => {
   if ((rawPdfBytes ? 1 : 0) + mergeFiles.length < 2) {
     webEditorToast('Add at least one more PDF', 'error'); return;
   }
-  const allowed = await WebPayment.canEdit();
+  const allowed = await _canEdit();
   if (!allowed) return;
   showLoading('Merging PDFs…');
   try {
@@ -1190,7 +1203,7 @@ $('convertPages').addEventListener('change', e => {
 
 $('btnConvertDo').addEventListener('click', async () => {
   if (!pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
-  const allowed = await WebPayment.canEdit();
+  const allowed = await _canEdit();
   if (!allowed) return;
 
   showLoading('Preparing…');
