@@ -256,9 +256,11 @@ const WebPayment = (() => {
   }
 
   // ── Injection sécurisée de canEdit ───────────────────────────────────────
+  // _editKey est exposé via le return — WebPayment._editKey est donc accessible
+  // dès que le IIFE termine. Pas besoin de l'assigner ici (causerait un
+  // ReferenceError car WebPayment n'est pas encore initialisé à ce stade).
   const _editKey = Symbol('folioCanEdit');
   window[_editKey] = canEdit;
-  WebPayment._editKey = _editKey;
 
   // ── API publique (canEdit intentionnellement absent) ──────────────────────
   return { getStatus, openCheckout, getUID, _editKey };
