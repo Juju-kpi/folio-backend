@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+# Pages à ne pas indexer (pages techniques, post-paiement)
+Disallow: /payment-success.html
+Disallow: /payment-cancel.html
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://folio-backend-ebon.vercel.app/sitemap.xml
