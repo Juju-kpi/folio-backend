@@ -7,6 +7,6 @@
     "dev": "vercel dev"
   },
   "dependencies": {
-    "stripe": "^14.21.0"
+    "stripe": "^22.1.1"
   }
 }
