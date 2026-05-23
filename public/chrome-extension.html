@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ForgePDF Chrome Extension — Edit PDFs Directly in Your Browser</title>
+  <meta name="description" content="ForgePDF Chrome extension: edit PDF text, sign, merge and convert PDFs without leaving your browser. Private, free, no upload required. Install from Chrome Web Store.">
+  <meta name="keywords" content="chrome pdf extension, pdf editor chrome, edit pdf chrome, sign pdf chrome extension, pdf tool chrome">
+  <link rel="canonical" href="https://folio-backend-ebon.vercel.app/chrome-extension.html">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://folio-backend-ebon.vercel.app/chrome-extension.html">
+  <meta property="og:title" content="ForgePDF Chrome Extension — Edit PDFs in Chrome">
+  <meta property="og:description" content="The Chrome extension that lets you edit, sign and convert PDFs without uploading them anywhere.">
+  <meta property="og:image" content="https://folio-backend-ebon.vercel.app/og-image.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #0c0c0f;
+      --bg2:     #111115;
+      --bg3:     #18181d;
+      --bg4:     #1f1f28;
+      --border:  rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.14);
+      --accent:  #e8ff47;
+      --accent2: #7b61ff;
+      --text:    #f0f0f0;
+      --text2:   #a0a0b0;
+      --muted:   #555568;
+      --green:   #4ade80;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise texture ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0; opacity: 0.5;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(12,12,15,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .nav-logo {
+      display: flex; align-items: center; gap: 8px;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px;
+      text-decoration: none; color: var(--text);
+    }
+    .nav-logo-dot {
+      width: 26px; height: 26px; background: var(--accent); border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 900; color: #0c0c0f;
+    }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a {
+      color: var(--text2); text-decoration: none; font-size: 14px;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-cta {
+      background: var(--accent); color: #0c0c0f;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
+      border: none; border-radius: 8px; padding: 8px 18px;
+      text-decoration: none; cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      padding: 120px 32px 80px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      top: -120px; left: 50%;
+      transform: translateX(-50%);
+      width: 700px; height: 700px;
+      background: radial-gradient(ellipse at center, rgba(232,255,71,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(232,255,71,0.1); border: 1px solid rgba(232,255,71,0.25);
+      border-radius: 100px; padding: 6px 14px; margin-bottom: 28px;
+      font-size: 12px; font-weight: 500; color: var(--accent);
+      font-family: 'Syne', sans-serif; letter-spacing: 0.5px;
+    }
+    .hero-badge-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(38px, 6vw, 72px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: 18px; color: var(--text2);
+      max-width: 520px; margin: 0 auto 44px;
+      line-height: 1.7;
+    }
+
+    .hero-actions {
+      display: flex; align-items: center; justify-content: center;
+      gap: 14px; flex-wrap: wrap;
+    }
+
+    /* ── CWS Badge ── */
+    .cws-badge {
+      display: inline-flex; align-items: center; gap: 12px;
+      background: #fff; border-radius: 12px;
+      padding: 10px 20px 10px 16px;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .cws-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    }
+    .cws-badge svg { flex-shrink: 0; }
+    .cws-badge-text { text-align: left; }
+    .cws-badge-top {
+      display: block; font-size: 10px; color: #555;
+      font-family: 'DM Sans', sans-serif; line-height: 1.2;
+    }
+    .cws-badge-bottom {
+      display: block; font-size: 15px; font-weight: 700;
+      color: #111; font-family: 'DM Sans', sans-serif; line-height: 1.2;
+    }
+
+    .hero-btn-secondary {
+      display: inline-flex; align-items: center; gap: 8px;
+      border: 1px solid var(--border2); border-radius: 10px;
+      padding: 12px 22px; color: var(--text); text-decoration: none;
+      font-size: 14px; font-weight: 500;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .hero-btn-secondary:hover {
+      background: var(--bg3); border-color: rgba(255,255,255,0.25);
+    }
+
+    .hero-stats {
+      display: flex; align-items: center; justify-content: center;
+      gap: 32px; margin-top: 52px; flex-wrap: wrap;
+    }
+    .stat { text-align: center; }
+    .stat-num {
+      font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800;
+      color: var(--accent);
+    }
+    .stat-label { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .stat-divider {
+      width: 1px; height: 36px; background: var(--border);
+    }
+
+    /* ── Section ── */
+    section { position: relative; z-index: 1; }
+
+    .section-label {
+      font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── Feature demos ── */
+    .features {
+      padding: 80px 32px;
+      max-width: 1100px; margin: 0 auto;
+    }
+
+    .features-header {
+      text-align: center; margin-bottom: 60px;
+    }
+    .features-header h2 {
+      font-family: 'Syne', sans-serif; font-size: clamp(28px, 4vw, 46px);
+      font-weight: 800; letter-spacing: -1.5px;
+      margin-bottom: 14px;
+    }
+    .features-header p { color: var(--text2); font-size: 16px; max-width: 480px; margin: 0 auto; }
+
+    .feature-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+    .feature-card:hover {
+      border-color: var(--border2);
+      transform: translateY(-3px);
+    }
+
+    /* ── Animated demo screens ── */
+    .demo-screen {
+      width: 100%; height: 200px;
+      background: var(--bg3);
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Demo 1: Text editing ── */
+    .demo-edit .pdf-lines {
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .pdf-line {
+      height: 10px; border-radius: 3px;
+      background: rgba(255,255,255,0.08);
+    }
+    .pdf-line.w80 { width: 80%; }
+    .pdf-line.w60 { width: 60%; }
+    .pdf-line.w90 { width: 90%; }
+    .pdf-line.w45 { width: 45%; }
+
+    .edit-cursor {
+      position: absolute;
+      top: 48px; left: 22px;
+      width: 120px; height: 12px;
+      background: rgba(232,255,71,0.15);
+      border: 1px solid rgba(232,255,71,0.4);
+      border-radius: 3px;
+      animation: editSelect 3.5s infinite;
+    }
+    @keyframes editSelect {
+      0%   { opacity: 0; transform: scaleX(0.3); transform-origin: left; }
+      15%  { opacity: 1; transform: scaleX(1); }
+      60%  { opacity: 1; }
+      75%  { opacity: 0; }
+      100% { opacity: 0; }
+    }
+
+    .edit-popup {
+      position: absolute;
+      top: 20px; right: 16px;
+      width: 110px;
+      background: var(--bg4);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 10px;
+      animation: popupIn 3.5s infinite;
+    }
+    @keyframes popupIn {
+      0%   { opacity: 0; transform: translateY(6px); }
+      20%  { opacity: 1; transform: translateY(0); }
+      70%  { opacity: 1; }
+      85%  { opacity: 0; }
+      100% { opacity: 0; }
+    }
+    .popup-field {
+      height: 8px; border-radius: 2px; margin-bottom: 6px;
+      background: rgba(255,255,255,0.12);
+    }
+    .popup-field.accent { background: rgba(232,255,71,0.3); width: 70%; }
+    .popup-btn {
+      height: 18px; border-radius: 4px; margin-top: 8px;
+      background: var(--accent); opacity: 0.8;
+    }
+
+    /* ── Demo 2: Signature ── */
+    .demo-sign .sig-area {
+      position: absolute;
+      top: 30px; left: 50%; transform: translateX(-50%);
+      width: 200px; height: 80px;
+      border: 1.5px dashed rgba(255,255,255,0.15);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .sig-path {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sig-path svg {
+      width: 170px; height: 60px;
+      overflow: visible;
+    }
+    .sig-path path {
+      stroke: var(--accent);
+      stroke-width: 2.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      stroke-dasharray: 200;
+      stroke-dashoffset: 200;
+      animation: drawSig 3.5s infinite;
+    }
+    @keyframes drawSig {
+      0%   { stroke-dashoffset: 200; opacity: 1; }
+      50%  { stroke-dashoffset: 0;   opacity: 1; }
+      75%  { stroke-dashoffset: 0;   opacity: 1; }
+      90%  { stroke-dashoffset: 0;   opacity: 0; }
+      100% { stroke-dashoffset: 200; opacity: 0; }
+    }
+
+    .sig-placed {
+      position: absolute;
+      bottom: 28px; right: 24px;
+      width: 130px; height: 44px;
+      border: 1.5px solid rgba(232,255,71,0.35);
+      border-radius: 6px;
+      background: rgba(232,255,71,0.04);
+      animation: sigPlace 3.5s infinite;
+      display: flex; align-items: center; justify-content: center;
+    }
+    @keyframes sigPlace {
+      0%   { opacity: 0; transform: scale(0.8); }
+      55%  { opacity: 0; transform: scale(0.8); }
+      70%  { opacity: 1; transform: scale(1); }
+      90%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    .sig-placed svg { width: 100px; height: 28px; }
+    .sig-placed path {
+      stroke: var(--accent); stroke-width: 2; fill: none;
+      stroke-linecap: round;
+    }
+
+    .demo-lines-bg {
+      position: absolute; top: 0; left: 0; right: 0;
+      padding: 14px;
+    }
+
+    /* ── Demo 3: Merge ── */
+    .demo-merge {
+      display: flex; align-items: center; justify-content: center;
+      gap: 0; padding: 20px;
+    }
+
+    .merge-doc {
+      width: 62px; height: 80px;
+      background: var(--bg4);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      display: flex; flex-direction: column;
+      padding: 8px 6px; gap: 4px;
+      flex-shrink: 0;
+    }
+    .merge-doc-line {
+      height: 5px; border-radius: 2px;
+      background: rgba(255,255,255,0.1);
+    }
+    .merge-doc-line.w70 { width: 70%; }
+    .merge-doc-line.w50 { width: 50%; }
+    .merge-doc-line.w85 { width: 85%; }
+    .merge-doc.doc2 { animation: doc2Float 3.5s infinite; }
+    .merge-doc.doc3 { animation: doc3Float 3.5s infinite; }
+
+    @keyframes doc2Float {
+      0%, 30%  { transform: translateX(0);    opacity: 1; }
+      60%       { transform: translateX(-30px); opacity: 0.5; }
+      75%, 100% { transform: translateX(-50px); opacity: 0; }
+    }
+    @keyframes doc3Float {
+      0%, 40%  { transform: translateX(0);    opacity: 1; }
+      70%       { transform: translateX(-50px); opacity: 0.5; }
+      80%, 100% { transform: translateX(-80px); opacity: 0; }
+    }
+
+    .merge-arrow {
+      width: 28px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .merge-arrow-line {
+      width: 100%; height: 1.5px;
+      background: linear-gradient(90deg, transparent, var(--accent2));
+      position: relative;
+    }
+
+    .merge-result {
+      width: 72px; height: 94px;
+      background: var(--bg4);
+      border: 1.5px solid rgba(123,97,255,0.4);
+      border-radius: 6px;
+      display: flex; flex-direction: column;
+      padding: 8px 6px; gap: 3px;
+      flex-shrink: 0;
+      animation: mergeResult 3.5s infinite;
+      box-shadow: 0 0 20px rgba(123,97,255,0.15);
+    }
+    @keyframes mergeResult {
+      0%, 55% { opacity: 0; transform: scale(0.85); }
+      75%     { opacity: 1; transform: scale(1); }
+      90%     { opacity: 1; }
+      100%    { opacity: 0; }
+    }
+    .merge-result-line {
+      height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.12);
+    }
+    .merge-result-sep {
+      height: 1px; background: var(--border2);
+      margin: 2px 0;
+    }
+
+    .feature-info {
+      padding: 22px 24px 24px;
+    }
+    .feature-tag {
+      display: inline-block;
+      font-size: 10px; font-weight: 700; letter-spacing: 1px;
+      text-transform: uppercase; border-radius: 100px;
+      padding: 3px 10px; margin-bottom: 10px;
+      font-family: 'Syne', sans-serif;
+    }
+    .tag-paid   { background: rgba(232,255,71,0.12); color: var(--accent); border: 1px solid rgba(232,255,71,0.2); }
+    .tag-free   { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+
+    .feature-info h3 {
+      font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700;
+      letter-spacing: -0.3px; margin-bottom: 8px;
+    }
+    .feature-info p {
+      font-size: 13.5px; color: var(--text2); line-height: 1.6;
+    }
+
+    /* ── Pricing strip ── */
+    .pricing-strip {
+      background: var(--bg2);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 40px 32px;
+      text-align: center;
+    }
+    .pricing-strip h2 {
+      font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800;
+      letter-spacing: -0.8px; margin-bottom: 8px;
+    }
+    .pricing-strip p { color: var(--text2); margin-bottom: 28px; }
+
+    .pricing-grid {
+      display: flex; align-items: stretch; justify-content: center;
+      gap: 16px; flex-wrap: wrap; max-width: 640px; margin: 0 auto;
+    }
+
+    .pricing-col {
+      flex: 1; min-width: 240px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: left;
+    }
+    .pricing-col.highlight {
+      border-color: rgba(232,255,71,0.25);
+      background: linear-gradient(135deg, rgba(232,255,71,0.04), var(--bg3));
+    }
+    .pricing-col-label {
+      font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .pricing-col.highlight .pricing-col-label { color: var(--accent); }
+    .pricing-col:not(.highlight) .pricing-col-label { color: var(--muted); }
+
+    .pricing-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13.5px; color: var(--text2);
+      margin-bottom: 10px;
+    }
+    .pricing-item-icon {
+      width: 18px; height: 18px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; flex-shrink: 0;
+    }
+    .icon-free { background: rgba(74,222,128,0.15); color: var(--green); }
+    .icon-paid { background: rgba(232,255,71,0.15); color: var(--accent); }
+
+    /* ── Privacy strip ── */
+    .privacy-strip {
+      padding: 60px 32px;
+      max-width: 800px; margin: 0 auto;
+      text-align: center;
+    }
+    .privacy-strip h2 {
+      font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800;
+      letter-spacing: -1px; margin-bottom: 16px;
+    }
+    .privacy-strip p { color: var(--text2); max-width: 520px; margin: 0 auto 32px; }
+
+    .privacy-badges {
+      display: flex; align-items: center; justify-content: center;
+      gap: 14px; flex-wrap: wrap;
+    }
+    .priv-badge {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 100px; padding: 8px 16px;
+      font-size: 13px; color: var(--text2);
+    }
+    .priv-badge-icon { font-size: 15px; }
+
+    /* ── FAQ ── */
+    .faq {
+      padding: 60px 32px 80px;
+      max-width: 720px; margin: 0 auto;
+    }
+    .faq-header { text-align: center; margin-bottom: 40px; }
+    .faq-header h2 {
+      font-family: 'Syne', sans-serif; font-size: 32px; font-weight: 800;
+      letter-spacing: -1px; margin-bottom: 10px;
+    }
+    .faq-header p { color: var(--text2); }
+
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .faq-item:hover { border-color: var(--border2); }
+
+    .faq-q {
+      width: 100%; background: none; border: none;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 22px;
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+      color: var(--text); cursor: pointer; text-align: left; gap: 12px;
+    }
+    .faq-q:hover { background: rgba(255,255,255,0.02); }
+
+    .faq-chevron {
+      width: 22px; height: 22px; flex-shrink: 0;
+      border-radius: 50%; border: 1px solid var(--border2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; transition: transform 0.2s, background 0.2s;
+      color: var(--text2);
+    }
+    .faq-item.open .faq-chevron {
+      transform: rotate(180deg);
+      background: rgba(232,255,71,0.1);
+      border-color: rgba(232,255,71,0.3);
+      color: var(--accent);
+    }
+
+    .faq-a {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s;
+      padding: 0 22px;
+      font-size: 14px; color: var(--text2); line-height: 1.7;
+    }
+    .faq-item.open .faq-a {
+      max-height: 300px;
+      padding: 0 22px 18px;
+    }
+
+    /* ── Bottom CTA ── */
+    .bottom-cta {
+      padding: 80px 32px 100px;
+      text-align: center;
+      position: relative;
+    }
+    .bottom-cta-glow {
+      position: absolute;
+      bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 400px;
+      background: radial-gradient(ellipse at center bottom, rgba(232,255,71,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .bottom-cta h2 {
+      font-family: 'Syne', sans-serif; font-size: clamp(28px, 4vw, 48px);
+      font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px;
+    }
+    .bottom-cta p { color: var(--text2); margin-bottom: 36px; max-width: 420px; margin-left: auto; margin-right: auto; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 12px;
+    }
+    .footer-left { display: flex; align-items: center; gap: 8px; }
+    .footer-logo {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 14px;
+      color: var(--text2);
+    }
+    .footer-links { display: flex; gap: 20px; }
+    .footer-links a {
+      font-size: 13px; color: var(--muted); text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--text); }
+
+    /* ── Stars ── */
+    .stars { color: #fbbf24; font-size: 14px; letter-spacing: 1px; }
+
+    @media (max-width: 600px) {
+      nav { padding: 0 18px; }
+      .nav-links { display: none; }
+      .hero { padding: 80px 18px 60px; }
+      .features, .faq, .bottom-cta, .pricing-strip, .privacy-strip { padding-left: 18px; padding-right: 18px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Nav ── -->
+<nav>
+  <a class="nav-logo" href="/">
+    <div class="nav-logo-dot">F</div>
+    ForgePDF
+  </a>
+  <div class="nav-links">
+    <a href="/">Web Editor</a>
+    <a href="/chrome-extension.html">Chrome Extension</a>
+    <a href="/privacy.html">Privacy</a>
+  </div>
+  <a class="nav-cta" href="https://chrome.google.com/webstore/detail/forgepdf/YOUR_EXTENSION_ID" target="_blank" rel="noopener">
+    Add to Chrome
+  </a>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="hero-glow"></div>
+
+  <div class="hero-badge">
+    <div class="hero-badge-dot"></div>
+    Available on Chrome Web Store
+  </div>
+
+  <h1>Edit PDFs<br><em>right in Chrome.</em></h1>
+  <p class="hero-sub">No upload, no account, no waiting. ForgePDF works entirely in your browser — your files never leave your device.</p>
+
+  <div class="hero-actions">
+    <!-- Official CWS Badge -->
+    <a class="cws-badge" href="https://chrome.google.com/webstore/detail/forgepdf/YOUR_EXTENSION_ID" target="_blank" rel="noopener" aria-label="Get ForgePDF on Chrome Web Store">
+      <!-- Chrome logo SVG -->
+      <svg width="36" height="36" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="128" cy="128" r="128" fill="#fff"/>
+        <circle cx="128" cy="128" r="52" fill="#4285F4"/>
+        <circle cx="128" cy="128" r="28" fill="white"/>
+        <!-- Red segment -->
+        <path d="M128 76 L224 76 A96 96 0 0 0 128 32 Z" fill="#EA4335"/>
+        <!-- Yellow segment -->
+        <path d="M224 76 A96 96 0 0 1 176 202 L128 128 Z" fill="#FBBC05"/>
+        <!-- Green segment -->
+        <path d="M176 202 A96 96 0 0 1 80 202 L128 128 Z" fill="#34A853"/>
+        <!-- Blue segment -->
+        <path d="M80 202 A96 96 0 0 1 32 76 L128 128 Z" fill="#4285F4"/>
+        <!-- Overlap fix -->
+        <path d="M32 76 L128 76 L128 128 Z" fill="#1A73E8"/>
+        <circle cx="128" cy="128" r="28" fill="white"/>
+        <circle cx="128" cy="128" r="20" fill="#4285F4"/>
+      </svg>
+      <div class="cws-badge-text">
+        <span class="cws-badge-top">Available in the</span>
+        <span class="cws-badge-bottom">Chrome Web Store</span>
+      </div>
+    </a>
+
+    <a class="hero-btn-secondary" href="/web-editor.html">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Use Web Editor instead
+    </a>
+  </div>
+
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num">0</div>
+      <div class="stat-label">Files uploaded</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stat-num">100%</div>
+      <div class="stat-label">Client-side processing</div>
+    </div>
+    <div class="stat-divider"></div>
+    <div class="stat">
+      <div class="stars">★★★★★</div>
+      <div class="stat-label">Chrome Web Store</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Feature demos ── -->
+<section class="features">
+  <div class="features-header">
+    <div class="section-label">What it does</div>
+    <h2>Everything you need,<br>nothing you don't.</h2>
+    <p>Three core features. All offline-capable. Signature, merge and convert are always free.</p>
+  </div>
+
+  <div class="feature-cards">
+
+    <!-- Card 1: Text editing -->
+    <div class="feature-card">
+      <div class="demo-screen demo-edit">
+        <div class="pdf-lines">
+          <div class="pdf-line w80"></div>
+          <div class="pdf-line w60"></div>
+          <div class="pdf-line w90"></div>
+          <div class="pdf-line w45"></div>
+          <div class="pdf-line w80"></div>
+          <div class="pdf-line w70"></div>
+          <div class="pdf-line w55"></div>
+          <div class="pdf-line w85"></div>
+        </div>
+        <div class="edit-cursor"></div>
+        <div class="edit-popup">
+          <div class="popup-field"></div>
+          <div class="popup-field" style="width:50%"></div>
+          <div class="popup-field accent"></div>
+          <div class="popup-btn"></div>
+        </div>
+      </div>
+      <div class="feature-info">
+        <div class="feature-tag tag-paid">Credits needed</div>
+        <h3>Edit PDF text</h3>
+        <p>Click any text block, retype it, change font, size, colour. The original is whited out and replaced — all inside the PDF, pixel-perfect.</p>
+      </div>
+    </div>
+
+    <!-- Card 2: Sign -->
+    <div class="feature-card">
+      <div class="demo-screen demo-sign">
+        <div class="demo-lines-bg">
+          <div style="display:flex;flex-direction:column;gap:7px;padding:4px 0">
+            <div class="pdf-line w80" style="background:rgba(255,255,255,0.05)"></div>
+            <div class="pdf-line w60" style="background:rgba(255,255,255,0.05)"></div>
+            <div class="pdf-line w90" style="background:rgba(255,255,255,0.05)"></div>
+          </div>
+        </div>
+        <div class="sig-area">
+          <div class="sig-path">
+            <svg viewBox="0 0 170 60">
+              <path d="M10 45 C20 20, 30 10, 40 30 C50 50, 55 35, 65 25 C75 15, 80 38, 95 30 C110 22, 115 42, 125 35 C135 28, 145 20, 155 32"/>
+            </svg>
+          </div>
+        </div>
+        <div class="sig-placed">
+          <svg viewBox="0 0 100 28">
+            <path d="M5 20 C12 8, 18 4, 24 14 C30 24, 33 16, 40 10 C47 4, 50 18, 60 14 C70 10, 75 20, 85 15 C92 10, 95 8, 98 14" stroke="rgba(232,255,71,0.7)" stroke-width="1.8"/>
+          </svg>
+        </div>
+      </div>
+      <div class="feature-info">
+        <div class="feature-tag tag-free">Always free</div>
+        <h3>Sign any PDF</h3>
+        <p>Draw, type or upload your signature. Drag it anywhere on the page. Resize it. Export the signed PDF instantly — no account needed.</p>
+      </div>
+    </div>
+
+    <!-- Card 3: Merge -->
+    <div class="feature-card">
+      <div class="demo-screen">
+        <div class="demo-merge" style="height:100%; align-items:center; justify-content:center; gap:8px;">
+          <div class="merge-doc">
+            <div class="merge-doc-line w85"></div>
+            <div class="merge-doc-line w70"></div>
+            <div class="merge-doc-line w50"></div>
+            <div class="merge-doc-line w70"></div>
+            <div class="merge-doc-line w85"></div>
+            <div class="merge-doc-line w60"></div>
+          </div>
+          <div class="merge-doc doc2" style="margin-left:6px">
+            <div class="merge-doc-line w70"></div>
+            <div class="merge-doc-line w85"></div>
+            <div class="merge-doc-line w50"></div>
+            <div class="merge-doc-line w85"></div>
+          </div>
+          <div class="merge-doc doc3" style="margin-left:4px; opacity:0.7">
+            <div class="merge-doc-line w60"></div>
+            <div class="merge-doc-line w85"></div>
+            <div class="merge-doc-line w70"></div>
+          </div>
+          <div class="merge-arrow" style="margin:0 6px">
+            <div class="merge-arrow-line"></div>
+          </div>
+          <div class="merge-result">
+            <div class="merge-result-line w85" style="width:85%"></div>
+            <div class="merge-result-line w70" style="width:70%"></div>
+            <div class="merge-result-line w50" style="width:50%"></div>
+            <div class="merge-result-sep"></div>
+            <div class="merge-result-line w70" style="width:70%"></div>
+            <div class="merge-result-line w85" style="width:85%"></div>
+            <div class="merge-result-sep"></div>
+            <div class="merge-result-line w60" style="width:60%"></div>
+            <div class="merge-result-line w85" style="width:85%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="feature-info">
+        <div class="feature-tag tag-free">Always free</div>
+        <h3>Merge &amp; convert</h3>
+        <p>Combine multiple PDFs into one, extract pages, or convert to JPG, PNG, TXT and DOCX — all in one click, all locally in your browser.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── Pricing strip ── -->
+<section class="pricing-strip">
+  <div class="section-label">Pricing</div>
+  <h2>Simple, transparent.</h2>
+  <p>Most features are free forever. Only text editing uses credits.</p>
+  <div class="pricing-grid">
+    <div class="pricing-col">
+      <div class="pricing-col-label">Always Free</div>
+      <div class="pricing-item">
+        <div class="pricing-item-icon icon-free">✓</div>
+        Sign PDF (draw / type / image)
+      </div>
+      <div class="pricing-item">
+        <div class="pricing-item-icon icon-free">✓</div>
+        Merge multiple PDFs
+      </div>
+      <div class="pricing-item">
+        <div class="pricing-item-icon icon-free">✓</div>
+        Extract pages
+      </div>
+      <div class="pricing-item">
+        <div class="pricing-item-icon icon-free">✓</div>
+        Convert to JPG / PNG / TXT / DOCX
+      </div>
+      <div class="pricing-item">
+        <div class="pricing-item-icon icon-free">✓</div>
+        Annotations &amp; highlights
+      </div>
+    </div>
+    <div class="pricing-col highlight">
+      <div class="pricing-col-label">Text Editing</div>
+      <div class="pricing-item" style="color:var(--text)">
+        <div class="pricing-item-icon icon-paid">✦</div>
+        First session free
+      </div>
+      <div class="pricing-item">
+        <div class="pricing-item-icon icon-paid">✦</div>
+        0.50 € per editing session
+      </div>
+      <div class="pricing-item">
+        <div class="pricing-item-icon icon-paid">✦</div>
+        Credits never expire
+      </div>
+      <div class="pricing-item">
+        <div class="pricing-item-icon icon-paid">✦</div>
+        No subscription, ever
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Privacy section ── -->
+<section class="privacy-strip">
+  <div class="section-label">Privacy first</div>
+  <h2>Your files stay<br>on your device.</h2>
+  <p>ForgePDF processes everything locally. Your PDFs are never sent to any server — not even ours. Full GDPR compliance by design.</p>
+  <div class="privacy-badges">
+    <div class="priv-badge"><span class="priv-badge-icon">🔒</span> No upload</div>
+    <div class="priv-badge"><span class="priv-badge-icon">🚫</span> No tracking</div>
+    <div class="priv-badge"><span class="priv-badge-icon">✈️</span> Works offline</div>
+    <div class="priv-badge"><span class="priv-badge-icon">🇪🇺</span> GDPR compliant</div>
+  </div>
+</section>
+
+<!-- ── FAQ ── -->
+<section class="faq">
+  <div class="faq-header">
+    <div class="section-label">FAQ</div>
+    <h2>Common questions</h2>
+    <p>Everything you need to know before installing.</p>
+  </div>
+
+  <div class="faq-item">
+    <button class="faq-q" onclick="toggleFaq(this)">
+      Does it work offline?
+      <div class="faq-chevron">▾</div>
+    </button>
+    <div class="faq-a">Yes. ForgePDF runs entirely in your browser using JavaScript. Once the extension is installed, signing, merging, converting and annotating PDFs all work without an internet connection. Text editing requires a brief server check to validate credits, but the actual processing remains local.</div>
+  </div>
+
+  <div class="faq-item">
+    <button class="faq-q" onclick="toggleFaq(this)">
+      Are my PDF files sent to your servers?
+      <div class="faq-chevron">▾</div>
+    </button>
+    <div class="faq-a">Never. All PDF processing happens client-side using PDF.js and pdf-lib — two open-source libraries that run directly in your browser. The only server communication is the credit check API call (which contains only your anonymous user ID, not your file). Your documents are never uploaded anywhere.</div>
+  </div>
+
+  <div class="faq-item">
+    <button class="faq-q" onclick="toggleFaq(this)">
+      What's a "free first session" for text editing?
+      <div class="faq-chevron">▾</div>
+    </button>
+    <div class="faq-a">The very first time you edit text in a PDF, it's completely free — no payment or account required. After that, text editing costs 0.50 € per session (a session lasts as long as you have the document open). Credits never expire. Signing, merging, converting and all other features remain free forever.</div>
+  </div>
+
+  <div class="faq-item">
+    <button class="faq-q" onclick="toggleFaq(this)">
+      What permissions does the extension need and why?
+      <div class="faq-chevron">▾</div>
+    </button>
+    <div class="faq-a">ForgePDF only requests the minimum necessary permissions: access to the current tab to detect when you open a PDF, and storage to save your anonymous user ID for credit tracking. It does not read your browsing history, access other tabs, or have access to any other site. You can audit the full source on GitHub.</div>
+  </div>
+
+  <div class="faq-item">
+    <button class="faq-q" onclick="toggleFaq(this)">
+      Does it work on Chrome for Mac, Windows and Linux?
+      <div class="faq-chevron">▾</div>
+    </button>
+    <div class="faq-a">Yes. ForgePDF is a standard Chrome extension and works on any desktop platform that runs Google Chrome — Windows 10/11, macOS 12+, and Linux. It also works in Chromium-based browsers like Edge, Brave and Arc. Mobile Chrome is not supported as extensions are not available on mobile.</div>
+  </div>
+
+  <div class="faq-item">
+    <button class="faq-q" onclick="toggleFaq(this)">
+      Can I edit scanned PDFs (image-only PDFs)?
+      <div class="faq-chevron">▾</div>
+    </button>
+    <div class="faq-a">Text editing requires the PDF to have actual selectable text. Scanned PDFs (image-only) do not have extractable text layers, so editing is not possible on those — this is a fundamental limitation of how PDFs store content. Signing, annotating, merging and converting to image formats work fine on any PDF, including scanned ones.</div>
+  </div>
+
+  <div class="faq-item">
+    <button class="faq-q" onclick="toggleFaq(this)">
+      How do I get a refund if something doesn't work?
+      <div class="faq-chevron">▾</div>
+    </button>
+    <div class="faq-a">If a feature doesn't work as expected and consumes a credit unfairly, contact us and we will refund it — no questions asked. Credits are non-refundable in general, but we stand behind the product and will make it right if there's a bug on our end.</div>
+  </div>
+
+</section>
+
+<!-- ── Bottom CTA ── -->
+<section class="bottom-cta">
+  <div class="bottom-cta-glow"></div>
+  <div class="section-label">Get started</div>
+  <h2>One click to install.<br>Zero data shared.</h2>
+  <p>Join users who've stopped uploading their PDFs to random websites.</p>
+
+  <a class="cws-badge" href="https://chrome.google.com/webstore/detail/forgepdf/YOUR_EXTENSION_ID" target="_blank" rel="noopener" style="margin:0 auto;display:inline-flex;">
+    <svg width="36" height="36" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="128" cy="128" r="128" fill="#fff"/>
+      <circle cx="128" cy="128" r="52" fill="#4285F4"/>
+      <path d="M128 76 L224 76 A96 96 0 0 0 128 32 Z" fill="#EA4335"/>
+      <path d="M224 76 A96 96 0 0 1 176 202 L128 128 Z" fill="#FBBC05"/>
+      <path d="M176 202 A96 96 0 0 1 80 202 L128 128 Z" fill="#34A853"/>
+      <path d="M80 202 A96 96 0 0 1 32 76 L128 128 Z" fill="#4285F4"/>
+      <path d="M32 76 L128 76 L128 128 Z" fill="#1A73E8"/>
+      <circle cx="128" cy="128" r="28" fill="white"/>
+      <circle cx="128" cy="128" r="20" fill="#4285F4"/>
+    </svg>
+    <div class="cws-badge-text">
+      <span class="cws-badge-top">Available in the</span>
+      <span class="cws-badge-bottom">Chrome Web Store</span>
+    </div>
+  </a>
+
+  <p style="margin-top:20px; font-size:12px; color:var(--muted);">
+    Or use the <a href="/web-editor.html" style="color:var(--text2)">web editor</a> — no installation required.
+  </p>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-left">
+    <div class="nav-logo-dot" style="width:22px;height:22px;font-size:11px;">F</div>
+    <span class="footer-logo">ForgePDF</span>
+  </div>
+  <div class="footer-links">
+    <a href="/">Home</a>
+    <a href="/web-editor.html">Web Editor</a>
+    <a href="/privacy.html">Privacy</a>
+    <a href="/terms.html">Terms</a>
+  </div>
+</footer>
+
+<script>
+  function toggleFaq(btn) {
+    const item = btn.parentElement;
+    const isOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+    if (!isOpen) item.classList.add('open');
+  }
+</script>
+
+</body>
+</html>
