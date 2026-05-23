@@ -823,8 +823,6 @@ $('sigClear').addEventListener('click', () => {
 
 $('sigApply').addEventListener('click', async () => {
   if (!sigCanvas || !pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
-  const allowed = await _canEdit();
-  if (!allowed) return;
   placeSigOnPDF(sigCanvas.toDataURL('image/png'));
   updateCreditsDisplay();
 });
@@ -833,8 +831,6 @@ $('sigTextApply').addEventListener('click', async () => {
   const name = $('sigTextInput').value.trim();
   if (!name)   { webEditorToast('Enter your name', 'error'); return; }
   if (!pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
-  const allowed = await _canEdit();
-  if (!allowed) return;
 
   const c = document.createElement('canvas');
   c.width = 300; c.height = 80;
@@ -851,8 +847,6 @@ $('sigImgInput').addEventListener('change', async e => {
   const f = e.target.files[0];
   if (!f) return;
   if (!pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
-  const allowed = await _canEdit();
-  if (!allowed) { e.target.value = ''; return; }
   const r = new FileReader();
   r.onload = ev => { sigImgData = ev.target.result; placeSigOnPDF(sigImgData); };
   r.readAsDataURL(f);
@@ -862,8 +856,6 @@ $('sigImgInput').addEventListener('change', async e => {
 $('sigImgApply').addEventListener('click', async () => {
   if (!sigImgData) { webEditorToast('Choose an image first', 'error'); return; }
   if (!pdfDoc)     { webEditorToast('Open a PDF first', 'error');    return; }
-  const allowed = await _canEdit();
-  if (!allowed) return;
   placeSigOnPDF(sigImgData);
   updateCreditsDisplay();
 });
@@ -1086,8 +1078,6 @@ async function buildThumbnails() {
 // ── Extract ───────────────────────────────────────────────────────────────────
 $('btnExtractDo').addEventListener('click', async () => {
   if (!selExtract.size) { webEditorToast('Select at least one page', 'error'); return; }
-  const allowed = await _canEdit();
-  if (!allowed) return;
   showLoading('Extracting pages…');
   try {
     const pages  = Array.from(selExtract).sort((a, b) => a - b);
@@ -1151,8 +1141,6 @@ $('btnMergeDo').addEventListener('click', async () => {
   if ((rawPdfBytes ? 1 : 0) + mergeFiles.length < 2) {
     webEditorToast('Add at least one more PDF', 'error'); return;
   }
-  const allowed = await _canEdit();
-  if (!allowed) return;
   showLoading('Merging PDFs…');
   try {
     const mergedDoc = await PDFLib.PDFDocument.create();
@@ -1200,8 +1188,6 @@ $('convertPages').addEventListener('change', e => {
 
 $('btnConvertDo').addEventListener('click', async () => {
   if (!pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
-  const allowed = await _canEdit();
-  if (!allowed) return;
 
   showLoading('Preparing…');
   $('convertProgress').style.display = '';
