@@ -44,11 +44,7 @@ let activeSigContainer = null;
 let sigsByPage     = new Map(); // Map<pageNum, [{dataURL, left, top, width, height}]>
 let fileName       = 'document.pdf';
 
-// ── Mode Formulaire ───────────────────────────────────────────────────────
-let formFields       = [];
-let formFieldValues  = new Map(); // fieldKey → {text, pageNum, pdfX, pdfY, pdfW, pdfH, fontSize, ...}
-let formClickActive  = false;
-let formDetectType   = 'none';
+// ── Mode Formulaire — state declared below ─────────────────────────────
 
 const $ = id => document.getElementById(id);
 
@@ -223,7 +219,7 @@ async function renderPage(num) {
 
   restoreSigsForPage(num);
   redrawAnnotationsForPage(num);
-  if (currentMode === 'form')     redrawFormFieldValues(num);
+  if (currentMode === 'form')     restoreFormFieldsForPage(num);
 
   hideLoading();
 }
@@ -711,208 +707,335 @@ async function buildModifiedPdfBytes() {
   }
 
   // ── 5. Champs formulaire ────────────────────────────────────────────────
-  await embedFormFieldsWeb(editDoc);
+  await embedFormFieldsInPdf(editDoc, getFont);
 
   return editDoc.save();
 }
 
-// ── Mode Formulaire (web) ──────────────────────────────────────────────────
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MODE FORMULAIRE — draggable fields + sidebar props panel
+// ═══════════════════════════════════════════════════════════════════════════
+
+let formFields       = [];       // [{key, type, name, pageNum, container, ...}]
+let formFieldValues  = new Map(); // key → {text, font, fontSize, color, pdfX, pdfY, pdfW, pdfH, pageNum, isAcro, fieldName}
+let formClickActive  = false;
+let formDetectType   = 'none';
+let activeFormField  = null;     // currently selected field object
+
+// ── Detect fields on current page ──────────────────────────────────────────
 async function detectAndRenderFormFields(pageNum) {
   if (!pdfDoc) return;
   const page   = await pdfDoc.getPage(pageNum);
   const vp     = page.getViewport({ scale: zoom * 1.5 });
   const annots = await page.getAnnotations();
-  formFields   = [];
 
+  // Remove old overlays
   $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => el.remove());
+  formFields = formFields.filter(f => f.pageNum !== pageNum);
 
   const acroFields = annots.filter(a => a.subtype === 'Widget' && a.fieldType);
 
   if (acroFields.length > 0) {
     formDetectType = 'acroform';
-    updateFormSidebarStatus(`📋 ${acroFields.length} field(s) detected (AcroForm)`, 'success');
-
+    updateFormSidebarStatus(`📋 ${acroFields.length} AcroForm field(s) detected`, 'success');
     acroFields.forEach((f, i) => {
-      const [x1, y1, x2, y2] = f.rect;
       const scaleX = vp.width  / page.view[2];
       const scaleY = vp.height / page.view[3];
-      const sx = x1 * scaleX;
-      const sy = (page.view[3] - y2) * scaleY;
-      const sw = (x2 - x1) * scaleX;
-      const sh = (y2 - y1) * scaleY;
-      const fieldKey  = `form-acro-${pageNum}-${i}`;
-      const existing  = formFieldValues.get(fieldKey);
-
-      formFields.push({
-        key: fieldKey, type: 'acroform',
-        name: f.fieldName || `Field ${i+1}`,
-        fieldType: f.fieldType,
-        screenX: sx, screenY: sy, screenW: Math.max(sw,30), screenH: Math.max(sh,14),
-        pdfRect: f.rect, pageNum,
-        value: existing ? existing.text : (f.fieldValue || ''),
-      });
+      const [x1, y1, x2, y2] = f.rect;
+      const sx = x1 * scaleX, sy = (page.view[3] - y2) * scaleY;
+      const sw = (x2 - x1) * scaleX, sh = (y2 - y1) * scaleY;
+      const key = `form-acro-${pageNum}-${i}`;
+      const existing = formFieldValues.get(key);
+      const field = {
+        key, type: 'acroform', name: f.fieldName || `Field ${i+1}`,
+        pageNum, pdfRect: f.rect,
+        initX: sx, initY: sy, initW: Math.max(sw, 40), initH: Math.max(sh, 14),
+        fontSize: existing ? existing.fontSize : Math.max(Math.round(sh * 0.6), 8),
+      };
+      createFormFieldOverlay(field, existing);
     });
-
   } else {
     const content = await page.getTextContent();
     const blanks  = content.items.filter(it => /^[_\.]{4,}$/.test(it.str.trim()));
-
     if (blanks.length > 0) {
       formDetectType = 'heuristic';
-      updateFormSidebarStatus(`🔍 ${blanks.length} zone(s) detected (heuristic)`, 'warn');
-
+      updateFormSidebarStatus(`🔍 ${blanks.length} zone(s) detected`, 'warn');
       blanks.forEach((item, i) => {
-        const tx  = pdfjsLib.Util.transform(vp.transform, item.transform);
-        const sx  = tx[4];
-        const sh  = Math.abs(item.transform[3]) * zoom * 1.5;
-        const sy  = tx[5] - sh;
-        const sw  = item.width * zoom * 1.5;
-        const fieldKey = `form-heu-${pageNum}-${i}`;
-        const existing = formFieldValues.get(fieldKey);
-
-        formFields.push({
-          key: fieldKey, type: 'heuristic',
-          name: `Zone ${i+1}`,
-          fieldType: 'Tx',
-          screenX: sx, screenY: sy, screenW: Math.max(sw,60), screenH: Math.max(sh,14),
-          pdfX: item.transform[4], pdfY: item.transform[5],
-          fontSize: Math.round(Math.abs(item.transform[3])),
-          pageNum,
-          value: existing ? existing.text : '',
-        });
+        const tx = pdfjsLib.Util.transform(vp.transform, item.transform);
+        const sh = Math.abs(item.transform[3]) * zoom * 1.5;
+        const key = `form-heu-${pageNum}-${i}`;
+        const existing = formFieldValues.get(key);
+        const field = {
+          key, type: 'heuristic', name: `Zone ${i+1}`,
+          pageNum, pdfX: item.transform[4], pdfY: item.transform[5],
+          initX: tx[4], initY: tx[5] - sh,
+          initW: Math.max(item.width * zoom * 1.5, 60), initH: Math.max(sh, 14),
+          fontSize: existing ? existing.fontSize : Math.max(Math.round(sh * 0.6), 8),
+        };
+        createFormFieldOverlay(field, existing);
       });
     } else {
       formDetectType = 'none';
       updateFormSidebarStatus('ℹ️ No fields detected — use click mode', 'muted');
     }
   }
-
   buildFormFieldList();
-  renderFormOverlays(pageNum);
 }
 
-function renderFormOverlays(pageNum) {
-  $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => el.remove());
+// ── Restore saved fields for this page (free-placed ones) ──────────────────
+function restoreFormFieldsForPage(pageNum) {
+  formFields.filter(f => f.pageNum === pageNum && f.type === 'free').forEach(f => {
+    if (!$('pdfPageWrap').querySelector(`.form-field-overlay[data-key="${f.key}"]`)) {
+      const existing = formFieldValues.get(f.key);
+      createFormFieldOverlay(f, existing);
+    }
+  });
+}
+
+// ── Create a draggable/resizable form field overlay ────────────────────────
+function createFormFieldOverlay(field, existing) {
   const wrap = $('pdfPageWrap');
-  formFields.filter(f => f.pageNum === pageNum).forEach(field => {
-    const div = document.createElement('div');
-    div.className = 'form-field-overlay';
-    div.dataset.key = field.key;
-    const val = formFieldValues.get(field.key);
-    div.style.cssText = `position:absolute;left:${field.screenX}px;top:${field.screenY}px;`
-      + `width:${field.screenW}px;height:${field.screenH}px;`
-      + `border:2px solid var(--accent);border-radius:3px;cursor:text;`
-      + `background:rgba(232,255,71,${val && val.text ? '0.15' : '0.06'});box-sizing:border-box;`;
-    div.title = field.name;
-    div.addEventListener('click', () => openFormFieldEditorWeb(field));
-    wrap.appendChild(div);
+  const val  = existing || formFieldValues.get(field.key);
+  const txt  = val ? val.text : '';
+  const fs   = (val ? val.fontSize : field.fontSize) || 11;
+  const color = (val && val.color) ? val.color : '#000000';
+  const font  = (val && val.font)  ? val.font  : 'Helvetica';
+
+  const container = document.createElement('div');
+  container.className   = 'form-field-overlay';
+  container.dataset.key = field.key;
+  container.style.cssText = `position:absolute;left:${field.initX}px;top:${field.initY}px;`
+    + `width:${field.initW}px;height:${field.initH}px;`
+    + `border:2px dashed var(--accent);border-radius:3px;cursor:move;`
+    + `box-sizing:border-box;display:flex;align-items:center;overflow:hidden;`;
+
+  // Text label inside
+  const label = document.createElement('div');
+  label.className = 'form-field-label';
+  label.textContent = txt || (field.name);
+  label.style.cssText = `flex:1;padding:2px 4px;font-size:${Math.round(fs * zoom * 1.5 * 0.72)}px;`
+    + `color:${txt ? color : 'rgba(160,160,160,0.7)'};font-family:${font},sans-serif;`
+    + `white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;`
+    + `user-select:none;`;
+  container.appendChild(label);
+
+  // Delete button
+  const del = document.createElement('div');
+  del.className   = 'sig-delete';
+  del.textContent = '×';
+  del.addEventListener('click', e => {
+    e.stopPropagation();
+    container.remove();
+    formFields = formFields.filter(f => f.key !== field.key);
+    formFieldValues.delete(field.key);
+    if (activeFormField && activeFormField.key === field.key) {
+      activeFormField = null;
+      if ($('formPropPanel')) $('formPropPanel').style.display = 'none';
+    }
+    buildFormFieldList();
+    updateFormBadge();
   });
+  container.appendChild(del);
+
+  // Resize handle
+  const resize = document.createElement('div');
+  resize.className = 'sig-resize';
+  container.appendChild(resize);
+
+  // Select on click
+  const selectField = () => {
+    wrap.querySelectorAll('.form-field-overlay').forEach(el =>
+      el.style.borderStyle = el.dataset.key === field.key ? 'solid' : 'dashed'
+    );
+    activeFormField = field;
+    field.container = container;
+    openFormPropPanel(field);
+  };
+
+  // Drag
+  let startX, startY;
+  container.addEventListener('mousedown', e => {
+    if (e.target === resize || e.target === del) return;
+    e.preventDefault(); selectField();
+    startX = e.clientX - container.offsetLeft;
+    startY = e.clientY - container.offsetTop;
+    const onMove = ev => {
+      container.style.left = (ev.clientX - startX) + 'px';
+      container.style.top  = (ev.clientY - startY) + 'px';
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onMove), { once: true });
+  });
+
+  // Resize
+  let rSX, rSY, rW, rH;
+  resize.addEventListener('mousedown', e => {
+    e.stopPropagation(); e.preventDefault();
+    rSX = e.clientX; rSY = e.clientY;
+    rW = container.offsetWidth; rH = container.offsetHeight;
+    const onMove = ev => {
+      container.style.width  = Math.max(40, rW + ev.clientX - rSX) + 'px';
+      container.style.height = Math.max(12, rH + ev.clientY - rSY) + 'px';
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', () => document.removeEventListener('mousemove', onMove), { once: true });
+  });
+
+  // Touch support
+  container.addEventListener('touchstart', e => {
+    if (e.target === resize || e.target === del) return;
+    selectField();
+    const t = e.touches[0];
+    startX = t.clientX - container.offsetLeft;
+    startY = t.clientY - container.offsetTop;
+    const onMove = ev => {
+      const tt = ev.touches[0];
+      container.style.left = (tt.clientX - startX) + 'px';
+      container.style.top  = (tt.clientY - startY) + 'px';
+    };
+    document.addEventListener('touchmove', onMove, { passive: true });
+    document.addEventListener('touchend', () => document.removeEventListener('touchmove', onMove), { once: true });
+  }, { passive: true });
+
+  container.addEventListener('keydown', e => {
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault(); del.click();
+    }
+  });
+  container.tabIndex = 0;
+  container.title = 'Drag · Resize · Click to edit';
+
+  // Add to DOM + field list
+  wrap.appendChild(container);
+  if (!formFields.find(f => f.key === field.key)) formFields.push(field);
+  field.container = container;
+
+  // If there's existing text, update label style immediately
+  if (txt) {
+    label.style.color = color;
+    container.style.borderStyle = 'solid';
+    container.style.borderColor = 'var(--success)';
+  }
 }
 
-function redrawFormFieldValues(pageNum) {
-  const canvas = $('pdfCanvas');
-  const ctx    = canvas.getContext('2d');
-  formFieldValues.forEach((val, key) => {
-    if (!val || !val.text || val.pageNum !== pageNum) return;
-    const fs = Math.round((val.fontSize || 11) * zoom * 1.5);
-    ctx.font      = `${fs}px Helvetica, Arial, sans-serif`;
-    ctx.fillStyle = '#000000';
-    ctx.fillText(val.text, val.screenX + 3, val.screenY + val.screenH - 4);
-  });
+// ── Open prop panel for a selected field ───────────────────────────────────
+function openFormPropPanel(field) {
+  const panel = $('formPropPanel');
+  if (!panel) return;
+  panel.style.display = '';
+
+  const val = formFieldValues.get(field.key) || {};
+  $('formPropText').value  = val.text  || '';
+  $('formPropFont').value  = val.font  || 'Helvetica';
+  $('formPropSize').value  = val.fontSize || field.fontSize || 11;
+  $('formPropColor').value = val.color || '#000000';
+
+  // Scroll panel into view
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+// ── Apply props from sidebar panel ─────────────────────────────────────────
+async function applyFormProps() {
+  if (!activeFormField) return;
+  const allowed = await _canEdit();
+  if (!allowed) return;
+
+  const field    = activeFormField;
+  const container = field.container || $('pdfPageWrap').querySelector(`.form-field-overlay[data-key="${field.key}"]`);
+  const text     = $('formPropText').value;
+  const font     = $('formPropFont').value;
+  const fontSize = parseFloat($('formPropSize').value) || 11;
+  const color    = $('formPropColor').value;
+
+  // Compute PDF coordinates from current container position
+  const page = await pdfDoc.getPage(field.pageNum);
+  const vp   = page.getViewport({ scale: zoom * 1.5 });
+  let pdfX, pdfY, pdfW, pdfH;
+
+  if (container) {
+    const sx = parseFloat(container.style.left);
+    const sy = parseFloat(container.style.top);
+    const sw = container.offsetWidth;
+    const sh = container.offsetHeight;
+    pdfX = sx / (zoom * 1.5);
+    pdfY = (vp.height - sy - sh) / (zoom * 1.5);
+    pdfW = sw / (zoom * 1.5);
+    pdfH = sh / (zoom * 1.5);
+  } else if (field.pdfRect) {
+    [pdfX, pdfY, pdfW, pdfH] = [
+      field.pdfRect[0], field.pdfRect[1],
+      field.pdfRect[2] - field.pdfRect[0],
+      field.pdfRect[3] - field.pdfRect[1],
+    ];
+  } else {
+    pdfX = field.pdfX || 0; pdfY = field.pdfY || 0;
+    pdfW = 100; pdfH = fontSize + 4;
+  }
+
+  if (text) {
+    formFieldValues.set(field.key, {
+      text, font, fontSize, color, pageNum: field.pageNum,
+      pdfX, pdfY, pdfW, pdfH,
+      isAcro: field.type === 'acroform', fieldName: field.name,
+    });
+  } else {
+    formFieldValues.delete(field.key);
+  }
+
+  // Update the label in the overlay
+  if (container) {
+    const label = container.querySelector('.form-field-label');
+    if (label) {
+      const displayFs = Math.round(fontSize * zoom * 1.5 * 0.72);
+      label.style.fontSize   = displayFs + 'px';
+      label.style.color      = text ? color : 'rgba(160,160,160,0.7)';
+      label.style.fontFamily = font + ',sans-serif';
+      label.textContent      = text || field.name;
+    }
+    container.style.borderStyle = text ? 'solid' : 'dashed';
+    container.style.borderColor = text ? 'var(--success)' : 'var(--accent)';
+  }
+
+  updateFormBadge();
+  buildFormFieldList();
+}
+
+// ── Sidebar field list ──────────────────────────────────────────────────────
 function buildFormFieldList() {
   const list = $('formFieldList');
   if (!list) return;
   list.innerHTML = '';
-  if (formFields.length === 0) {
+  const pageFields = formFields.filter(f => f.pageNum === currentPage);
+  if (pageFields.length === 0) {
     list.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:6px 2px;">No fields on this page</div>';
     return;
   }
-  formFields.forEach(field => {
+  pageFields.forEach(field => {
     const val = formFieldValues.get(field.key);
     const li  = document.createElement('div');
     li.className = 'block-item' + (val && val.text ? ' selected' : '');
     li.dataset.key = field.key;
     li.innerHTML = `
-      <div class="block-preview">${escapeHtml(field.name)}</div>
+      <div class="block-preview">${escapeHtml(val && val.text ? val.text : field.name)}</div>
       <div class="block-meta">
-        <span class="block-tag">${field.type === 'acroform' ? 'AcroForm' : field.type === 'free' ? 'Free' : 'Heuristic'}</span>
-        ${val && val.text ? `<span class="block-tag modified">✓ filled</span>` : ''}
+        <span class="block-tag">${field.type === 'acroform' ? 'AcroForm' : field.type === 'free' ? 'Free' : 'Auto'}</span>
+        ${val && val.text ? '<span class="block-tag modified">✓</span>' : ''}
       </div>`;
-    li.addEventListener('click', () => openFormFieldEditorWeb(field));
+    li.addEventListener('click', () => {
+      activeFormField = field;
+      field.container = $('pdfPageWrap').querySelector(`.form-field-overlay[data-key="${field.key}"]`);
+      // Highlight overlay
+      $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el =>
+        el.style.borderStyle = el.dataset.key === field.key ? 'solid' : 'dashed'
+      );
+      openFormPropPanel(field);
+    });
     list.appendChild(li);
   });
 }
 
-function openFormFieldEditorWeb(field) {
-  $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el =>
-    el.style.borderColor = el.dataset.key === field.key ? 'var(--accent2)' : 'var(--accent)'
-  );
-  const li = document.querySelector(`.block-item[data-key="${field.key}"]`);
-  if (li) li.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-
-  $('pdfPageWrap').querySelectorAll('.form-free-overlay').forEach(el => el.remove());
-  const existing = formFieldValues.get(field.key);
-
-  const inp = document.createElement('input');
-  inp.type  = 'text';
-  inp.value = existing ? existing.text : '';
-  inp.placeholder = field.name;
-  const fs  = Math.round((field.fontSize || 11) * zoom * 1.5 * 0.75);
-  inp.style.cssText = `position:absolute;left:${field.screenX}px;top:${field.screenY}px;`
-    + `width:${field.screenW}px;height:${field.screenH}px;`
-    + `border:2px solid var(--accent2);border-radius:3px;padding:1px 4px;`
-    + `background:rgba(255,255,255,0.97);color:#111;font-size:${fs}px;`
-    + `outline:none;box-sizing:border-box;z-index:50;`;
-  inp.className = 'form-free-overlay';
-  inp.dataset.key = field.key;
-  $('pdfPageWrap').appendChild(inp);
-  inp.focus();
-
-  const commit = async () => {
-    const text = inp.value;
-    inp.remove();
-
-    if (text && text !== (existing ? existing.text : '')) {
-      const allowed = await _canEdit();
-      if (!allowed) { renderFormOverlays(field.pageNum); return; }
-    }
-
-    if (text === '') { formFieldValues.delete(field.key); }
-    else {
-      formFieldValues.set(field.key, {
-        text, pageNum: field.pageNum,
-        pdfX:     field.pdfRect ? field.pdfRect[0] : (field.pdfX || 0),
-        pdfY:     field.pdfRect ? field.pdfRect[1] : (field.pdfY || 0),
-        pdfW:     field.pdfRect ? (field.pdfRect[2] - field.pdfRect[0]) : (field.screenW / (zoom*1.5)),
-        pdfH:     field.pdfRect ? (field.pdfRect[3] - field.pdfRect[1]) : (field.screenH / (zoom*1.5)),
-        fontSize: field.fontSize || Math.round(field.screenH / (zoom*1.5) * 0.75),
-        screenX:  field.screenX, screenY: field.screenY, screenH: field.screenH,
-        isAcro:   field.type === 'acroform',
-        fieldName: field.name,
-      });
-    }
-
-    updateFormBadge();
-    buildFormFieldList();
-    renderFormOverlays(field.pageNum);
-
-    const page = await pdfDoc.getPage(field.pageNum);
-    const vp   = page.getViewport({ scale: zoom * 1.5 });
-    const ctx  = $('pdfCanvas').getContext('2d');
-    await page.render({ canvasContext: ctx, viewport: vp }).promise;
-    await redrawModificationsOnCanvas(ctx, vp, field.pageNum);
-    redrawFormFieldValues(field.pageNum);
-    webEditorToast('✓ Field saved', 'success');
-    updateCreditsDisplay();
-  };
-
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
-  inp.addEventListener('blur', commit);
-}
-
+// ── Helpers ─────────────────────────────────────────────────────────────────
 function updateFormSidebarStatus(msg, type) {
   const el = $('formStatusMsg');
   if (!el) return;
@@ -928,41 +1051,39 @@ function updateFormBadge() {
   else           { badge.classList.add('hidden'); }
 }
 
+// ── Click mode (free placement) ─────────────────────────────────────────────
 function activateFormClickMode() {
   formClickActive = true;
   $('pdfPageWrap').style.cursor = 'crosshair';
   const btn = $('btnFormClickToggle');
-  if (btn) {
-    btn.textContent = '🖱️ Click mode active — click anywhere on PDF';
-    btn.style.background   = 'rgba(123,97,255,0.2)';
-    btn.style.borderColor  = 'rgba(123,97,255,0.5)';
-  }
-  const wrap   = $('pdfPageWrap');
+  if (btn) { btn.textContent = 'Click mode active — click on PDF'; btn.style.background = 'rgba(123,97,255,0.2)'; }
+
+  const wrap    = $('pdfPageWrap');
   const handler = async e => {
     if (!formClickActive) return;
-    if (e.target.tagName === 'INPUT' || e.target.classList.contains('form-field-overlay')) return;
+    if (e.target.classList.contains('form-field-overlay') ||
+        e.target.classList.contains('sig-delete') ||
+        e.target.classList.contains('sig-resize')) return;
     const rect = $('pdfCanvas').getBoundingClientRect();
     const sx   = e.clientX - rect.left;
     const sy   = e.clientY - rect.top;
-    const fsz  = 11;
-    const fKey = `form-free-${currentPage}-${Date.now()}`;
+    const key  = `form-free-${currentPage}-${Date.now()}`;
     const page = await pdfDoc.getPage(currentPage);
     const vp   = page.getViewport({ scale: zoom * 1.5 });
-    const pdfX = sx / (zoom * 1.5);
-    const pdfY = (vp.height - sy) / (zoom * 1.5);
-
-    const freeField = {
-      key: fKey, type: 'free',
-      name: 'Free field',
-      fieldType: 'Tx',
-      screenX: sx - 2, screenY: sy - fsz * zoom * 1.5 - 2,
-      screenW: 180, screenH: Math.round(fsz * zoom * 1.5 + 8),
-      pdfX, pdfY, fontSize: fsz, pageNum: currentPage,
+    const fsz  = parseFloat($('formPropSize') ? $('formPropSize').value : 11) || 11;
+    const h    = Math.round(fsz * zoom * 1.5 * 1.5);
+    const field = {
+      key, type: 'free', name: 'Free field', pageNum: currentPage,
+      pdfX: sx / (zoom * 1.5),
+      pdfY: (vp.height - sy - h) / (zoom * 1.5),
+      initX: sx, initY: sy - h / 2, initW: 160, initH: h,
+      fontSize: fsz,
     };
-    formFields.push(freeField);
-    buildFormFieldList();
-    renderFormOverlays(currentPage);
-    openFormFieldEditorWeb(freeField);
+    createFormFieldOverlay(field, null);
+    activeFormField = field;
+    openFormPropPanel(field);
+    // Focus text input
+    setTimeout(() => { const t = $('formPropText'); if (t) { t.focus(); t.select(); } }, 50);
   };
   wrap._formClickHandler = handler;
   wrap.addEventListener('click', handler);
@@ -972,11 +1093,7 @@ function deactivateFormClickMode() {
   formClickActive = false;
   $('pdfPageWrap').style.cursor = '';
   const btn = $('btnFormClickToggle');
-  if (btn) {
-    btn.textContent  = '🖱️ Enable click mode';
-    btn.style.background  = '';
-    btn.style.borderColor = '';
-  }
+  if (btn) { btn.textContent = 'Click mode — place field anywhere'; btn.style.background = ''; }
   const wrap = $('pdfPageWrap');
   if (wrap._formClickHandler) {
     wrap.removeEventListener('click', wrap._formClickHandler);
@@ -984,51 +1101,91 @@ function deactivateFormClickMode() {
   }
 }
 
+// ── Embed form fields into PDF on export ────────────────────────────────────
+async function embedFormFieldsInPdf(editDoc, loadFont) {
+  if (formFieldValues.size === 0) return;
+  for (const [key, val] of formFieldValues.entries()) {
+    if (!val || !val.text) continue;
+    const pageIdx = (val.pageNum || 1) - 1;
+    const page    = editDoc.getPage(pageIdx);
+
+    // Try AcroForm native first
+    if (val.isAcro && val.fieldName) {
+      try { editDoc.getForm().getTextField(val.fieldName).setText(val.text); continue; }
+      catch(e) { /* fallback to drawText */ }
+    }
+
+    const font = await loadFont(editDoc, val.font || 'Helvetica');
+    const fs   = val.fontSize || 11;
+    const pdfX = val.pdfX || 0;
+    const pdfY = val.pdfY || 0;
+    const pdfW = Math.max(val.pdfW || 100, 10);
+    const pdfH = Math.max(val.pdfH || fs + 4, fs + 2);
+
+    // Parse hex color
+    const hex = (val.color || '#000000').replace('#','');
+    const r   = parseInt(hex.slice(0,2),16)/255;
+    const g   = parseInt(hex.slice(2,4),16)/255;
+    const b   = parseInt(hex.slice(4,6),16)/255;
+
+    page.drawRectangle({ x: pdfX - 1, y: pdfY - 2, width: pdfW + 2, height: pdfH + 4, color: PDFLib.rgb(1,1,1), opacity: 1 });
+    page.drawText(val.text, { x: pdfX + 2, y: pdfY + 2, size: fs, font, color: PDFLib.rgb(r,g,b), maxWidth: pdfW - 4 });
+  }
+}
+
+// ── DOMContentLoaded wiring ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   const tb = $('btnFormClickToggle');
   if (tb) tb.addEventListener('click', () => {
     if (formClickActive) deactivateFormClickMode();
     else activateFormClickMode();
   });
+
+  const ab = $('formApplyProps');
+  if (ab) ab.addEventListener('click', applyFormProps);
+
+  // Also apply on Enter in text area (Shift+Enter = newline)
+  const ft = $('formPropText');
+  if (ft) ft.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); applyFormProps(); }
+  });
+
+  // Live preview: update label as user types
+  if (ft) ft.addEventListener('input', () => {
+    if (!activeFormField) return;
+    const container = activeFormField.container ||
+      $('pdfPageWrap').querySelector(`.form-field-overlay[data-key="${activeFormField.key}"]`);
+    if (!container) return;
+    const label = container.querySelector('.form-field-label');
+    if (label) {
+      const txt  = $('formPropText').value;
+      const col  = $('formPropColor') ? $('formPropColor').value : '#000000';
+      label.textContent = txt || activeFormField.name;
+      label.style.color = txt ? col : 'rgba(160,160,160,0.7)';
+    }
+  });
+
   const cb = $('btnFormClear');
   if (cb) cb.addEventListener('click', () => {
-    formFieldValues.clear(); formFields = [];
-    updateFormBadge();
-    $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el=>el.remove());
+    formFieldValues.clear();
+    formFields = [];
+    activeFormField = null;
+    $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => el.remove());
+    if ($('formPropPanel')) $('formPropPanel').style.display = 'none';
     if ($('formFieldList')) $('formFieldList').innerHTML = '<div style="font-size:11px;color:var(--muted);padding:6px 2px;">Fields cleared</div>';
-    webEditorToast('✓ Form fields cleared');
+    updateFormBadge();
+  });
+
+  const db = $('btnFormDeleteField');
+  if (db) db.addEventListener('click', () => {
+    if (!activeFormField) return;
+    const container = activeFormField.container ||
+      $('pdfPageWrap').querySelector(`.form-field-overlay[data-key="${activeFormField.key}"]`);
+    if (container) container.querySelector('.sig-delete').click();
   });
 }, { once: true });
 
-async function embedFormFieldsWeb(editDoc) {
-  if (formFieldValues.size === 0) return;
-  const helv = await editDoc.embedFont(PDFLib.StandardFonts.Helvetica);
 
-  for (const [key, val] of formFieldValues.entries()) {
-    if (!val || !val.text) continue;
-    const pageNum = val.pageNum || currentPage;
-    const page    = editDoc.getPage(pageNum - 1);
-    const { height } = page.getSize();
-    const fs = val.fontSize || 11;
-
-    // Essai AcroForm natif
-    if (val.isAcro && val.fieldName) {
-      try {
-        editDoc.getForm().getTextField(val.fieldName).setText(val.text);
-        continue;
-      } catch(e) { /* fallback */ }
-    }
-
-    // Dessin direct
-    const pdfX = val.pdfX || 0;
-    const pdfY = val.pdfY || 0;  // coordonnées déjà converties
-    const pdfW = Math.max(val.pdfW || 100, 20);
-    const pdfH = Math.max(val.pdfH || fs + 4, fs + 2);
-
-    page.drawRectangle({ x: pdfX-1, y: pdfY-2, width: pdfW+2, height: pdfH+2, color: PDFLib.rgb(1,1,1), opacity: 1 });
-    page.drawText(val.text, { x: pdfX+2, y: pdfY, size: fs, font: helv, color: PDFLib.rgb(0,0,0), maxWidth: pdfW-4 });
-  }
-}
 $('btnExport').addEventListener('click', async () => {
   if (!pdfDoc) { webEditorToast('No PDF loaded', 'error'); return; }
   if (currentMode === 'extract') { $('btnExtractDo').click(); return; }
@@ -1153,6 +1310,8 @@ $('sigClear').addEventListener('click', () => {
 
 $('sigApply').addEventListener('click', async () => {
   if (!sigCanvas || !pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
+  const allowed = await _canEdit();
+  if (!allowed) return;
   placeSigOnPDF(sigCanvas.toDataURL('image/png'));
   updateCreditsDisplay();
 });
@@ -1161,6 +1320,8 @@ $('sigTextApply').addEventListener('click', async () => {
   const name = $('sigTextInput').value.trim();
   if (!name)   { webEditorToast('Enter your name', 'error'); return; }
   if (!pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
+  const allowed = await _canEdit();
+  if (!allowed) return;
 
   const c = document.createElement('canvas');
   c.width = 300; c.height = 80;
@@ -1177,6 +1338,8 @@ $('sigImgInput').addEventListener('change', async e => {
   const f = e.target.files[0];
   if (!f) return;
   if (!pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
+  const allowed = await _canEdit();
+  if (!allowed) { e.target.value = ''; return; }
   const r = new FileReader();
   r.onload = ev => { sigImgData = ev.target.result; placeSigOnPDF(sigImgData); };
   r.readAsDataURL(f);
@@ -1186,6 +1349,8 @@ $('sigImgInput').addEventListener('change', async e => {
 $('sigImgApply').addEventListener('click', async () => {
   if (!sigImgData) { webEditorToast('Choose an image first', 'error'); return; }
   if (!pdfDoc)     { webEditorToast('Open a PDF first', 'error');    return; }
+  const allowed = await _canEdit();
+  if (!allowed) return;
   placeSigOnPDF(sigImgData);
   updateCreditsDisplay();
 });
@@ -1408,6 +1573,8 @@ async function buildThumbnails() {
 // ── Extract ───────────────────────────────────────────────────────────────────
 $('btnExtractDo').addEventListener('click', async () => {
   if (!selExtract.size) { webEditorToast('Select at least one page', 'error'); return; }
+  const allowed = await _canEdit();
+  if (!allowed) return;
   showLoading('Extracting pages…');
   try {
     const pages  = Array.from(selExtract).sort((a, b) => a - b);
@@ -1471,6 +1638,8 @@ $('btnMergeDo').addEventListener('click', async () => {
   if ((rawPdfBytes ? 1 : 0) + mergeFiles.length < 2) {
     webEditorToast('Add at least one more PDF', 'error'); return;
   }
+  const allowed = await _canEdit();
+  if (!allowed) return;
   showLoading('Merging PDFs…');
   try {
     const mergedDoc = await PDFLib.PDFDocument.create();
@@ -1518,6 +1687,8 @@ $('convertPages').addEventListener('change', e => {
 
 $('btnConvertDo').addEventListener('click', async () => {
   if (!pdfDoc) { webEditorToast('Open a PDF first', 'error'); return; }
+  const allowed = await _canEdit();
+  if (!allowed) return;
 
   showLoading('Preparing…');
   $('convertProgress').style.display = '';

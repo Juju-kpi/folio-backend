@@ -1,39 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-   <meta charset="UTF-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ForgePDF Editor — Edit, Sign & Convert PDFs Online</title>
   <meta name="description" content="Free online PDF editor. Edit text, sign, merge, split, annotate and convert PDFs directly in your browser. No upload, no account needed.">
   <meta name="robots" content="index, follow">
-  <link rel="canonical" href="https://folio-backend-ebon.vercel.app/web-editor.html">
-  <!-- ── OPEN GRAPH ── -->
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://folio-backend-ebon.vercel.app/web-editor.html">
-  <meta property="og:title" content="ForgePDF Editor — Edit, Sign & Convert PDFs Online">
-  <meta property="og:description" content="Free online PDF editor. Edit text, sign, merge, split, annotate and convert PDFs in your browser. No upload, no account needed.">
-  <meta property="og:image" content="https://folio-backend-ebon.vercel.app/og-image.png">
-  <meta property="og:site_name" content="ForgePDF">
- 
-  <!-- ── TWITTER CARD ── -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ForgePDF Editor — Edit, Sign & Convert PDFs Online">
-  <meta name="twitter:description" content="Free online PDF editor. No account, no upload. First session free.">
-  <meta name="twitter:image" content="https://folio-backend-ebon.vercel.app/og-image.png">
-
-  <!-- ── STRUCTURED DATA ── -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "ForgePDF Editor",
-    "url": "https://folio-backend-ebon.vercel.app/web-editor.html",
-    "applicationCategory": "UtilitiesApplication",
-    "operatingSystem": "Web",
-    "description": "Free online PDF editor. Edit text, sign, merge, split, annotate and convert PDFs directly in your browser.",
-    "offers": [{"@type": "Offer", "price": "0", "priceCurrency": "EUR"}]
-  }
-  </script>
+  <link rel="canonical" href="https://folio-pdf.vercel.app/web-editor.html">
 
   <!-- PDF.js from CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -114,9 +87,9 @@
     }
 
     .mode-tab {
-      padding: 5px 11px; border-radius: 7px; border: none;
+      padding: 5px 8px; border-radius: 7px; border: none;
       background: transparent; color: var(--text2);
-      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 11px;
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 10.5px;
       cursor: pointer; transition: all 0.15s; white-space: nowrap;
     }
     .mode-tab.active { background: var(--bg4); color: var(--text); border: 1px solid var(--border2); }
@@ -518,9 +491,9 @@
       <button class="mode-tab active" data-mode="edit">✏️ Edit</button>
       <button class="mode-tab" data-mode="form">📝 Form</button>
       <button class="mode-tab" data-mode="sign">✍️ Sign</button>
-      <button class="mode-tab" data-mode="merge">🗂️ Merge</button>
-      <button class="mode-tab" data-mode="extract">✂️ Extract</button>
-      <button class="mode-tab" data-mode="annotate">🖍️ Annotate</button>
+      <button class="mode-tab" data-mode="merge">🗂 Merge</button>
+      <button class="mode-tab" data-mode="extract">✂ Extract</button>
+      <button class="mode-tab" data-mode="annotate">🖍 Note</button>
       <button class="mode-tab" data-mode="convert">⚡ Convert</button>
     </div>
 
@@ -811,12 +784,97 @@
             <div style="color:var(--muted);font-size:11px;padding:8px 4px;">Open a PDF to detect fields</div>
           </div>
         </div>
+
+        <!-- Properties panel — shown when a field is selected -->
+        <div class="sidebar-section" id="formPropPanel" style="display:none;">
+          <div class="sidebar-title" style="margin-bottom:8px;">Field properties</div>
+          <div class="prop-row">
+            <div class="prop-label">Text content</div>
+            <textarea class="prop-input" id="formPropText" rows="2" style="resize:vertical;" placeholder="Type here…"></textarea>
+          </div>
+          <div class="prop-row-2">
+            <div>
+              <div class="prop-label">Font</div>
+              <select class="prop-select" id="formPropFont">
+                <optgroup label="— Sans-Serif —">
+                  <option value="Helvetica">Helvetica</option>
+                  <option value="Helvetica-Bold">Helvetica Bold</option>
+                  <option value="Helvetica-Oblique">Helvetica Italic</option>
+                  <option value="Helvetica-BoldOblique">Helv. Bold Italic</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Inter-Bold">Inter Bold</option>
+                  <option value="Roboto">Roboto</option>
+                  <option value="Roboto-Bold">Roboto Bold</option>
+                  <option value="Roboto-Italic">Roboto Italic</option>
+                  <option value="OpenSans">Open Sans</option>
+                  <option value="OpenSans-Bold">Open Sans Bold</option>
+                  <option value="Lato">Lato</option>
+                  <option value="Lato-Bold">Lato Bold</option>
+                  <option value="Montserrat">Montserrat</option>
+                  <option value="Montserrat-Bold">Montserrat Bold</option>
+                  <option value="Poppins">Poppins</option>
+                  <option value="Poppins-Bold">Poppins Bold</option>
+                  <option value="Nunito">Nunito</option>
+                  <option value="Raleway">Raleway</option>
+                  <option value="Oswald">Oswald</option>
+                  <option value="DMSans">DM Sans</option>
+                </optgroup>
+                <optgroup label="— Serif —">
+                  <option value="Times-Roman">Times Roman</option>
+                  <option value="Times-Bold">Times Bold</option>
+                  <option value="Times-Italic">Times Italic</option>
+                  <option value="Times-BoldItalic">Times Bold Italic</option>
+                  <option value="Merriweather">Merriweather</option>
+                  <option value="Merriweather-Bold">Merriweather Bold</option>
+                  <option value="Playfair">Playfair Display</option>
+                  <option value="Playfair-Bold">Playfair Display Bold</option>
+                  <option value="Lora">Lora</option>
+                  <option value="Lora-Bold">Lora Bold</option>
+                  <option value="PTSerif">PT Serif</option>
+                  <option value="CrimsonPro">Crimson Pro</option>
+                </optgroup>
+                <optgroup label="— Monospace —">
+                  <option value="Courier">Courier</option>
+                  <option value="Courier-Bold">Courier Bold</option>
+                  <option value="Courier-Oblique">Courier Italic</option>
+                  <option value="FiraCode">Fira Code</option>
+                  <option value="JetBrainsMono">JetBrains Mono</option>
+                  <option value="SourceCodePro">Source Code Pro</option>
+                </optgroup>
+                <optgroup label="— Display / Deco —">
+                  <option value="BebasNeue">Bebas Neue</option>
+                  <option value="Righteous">Righteous</option>
+                  <option value="Pacifico">Pacifico</option>
+                  <option value="Lobster">Lobster</option>
+                  <option value="GreatVibes">Great Vibes</option>
+                  <option value="DancingScript">Dancing Script</option>
+                </optgroup>
+              </select>
+            </div>
+            <div>
+              <div class="prop-label">Size (pt)</div>
+              <input class="prop-input" id="formPropSize" type="number" value="11" min="4" max="120" step="0.5">
+            </div>
+          </div>
+          <div class="prop-row-2">
+            <div>
+              <div class="prop-label">Color</div>
+              <div class="color-swatch"><input type="color" id="formPropColor" value="#000000"></div>
+            </div>
+            <div>
+              <div class="prop-label">Delete</div>
+              <button class="apply-btn" id="btnFormDeleteField" style="margin-top:0;background:rgba(255,71,87,0.15);border:1px solid rgba(255,71,87,0.3);color:var(--danger);font-size:11px;padding:6px;">🗑 Remove</button>
+            </div>
+          </div>
+          <button class="apply-btn" id="formApplyProps">✓ Apply</button>
+        </div>
+
         <div class="sidebar-section">
           <button class="apply-btn" id="btnFormClickToggle" style="margin-top:0;background:var(--bg4);color:var(--text);border:1px solid var(--border2);">
             🖱️ Enable click mode
           </button>
           <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">
-            Click anywhere on the PDF to place a free-form text field, even if no form fields are detected.
+            Click anywhere on the PDF to place a text field. Drag to reposition, resize from corner.
           </div>
           <button class="apply-btn" id="btnFormClear" style="margin-top:10px;background:rgba(255,71,87,0.15);border:1px solid rgba(255,71,87,0.3);color:var(--danger);">
             🗑 Clear all fields
