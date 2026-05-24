@@ -1266,7 +1266,25 @@ function switchMode(mode) {
 
   // Désactiver clic libre si on quitte form
   if (mode !== 'form' && formClickActive) deactivateFormClickMode();
-  if (mode !== 'form') $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el=>el.remove());
+  if (mode !== 'form') {
+    // Sauvegarder les positions actuelles des champs avant de supprimer les overlays
+    $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el => {
+      const key = el.dataset.key;
+      const field = formFields.find(f => f.key === key);
+      if (field) {
+        field.initX = parseFloat(el.style.left) || field.initX;
+        field.initY = parseFloat(el.style.top)  || field.initY;
+        field.initW = el.offsetWidth  || field.initW;
+        field.initH = el.offsetHeight || field.initH;
+        // Mettre à jour les coords PDF si on a un vp valide
+        const val = formFieldValues.get(key);
+        if (val && pdfDoc) {
+          val.pdfX = field.initX / (zoom * 1.5);
+        }
+      }
+      el.remove();
+    });
+  }
 
   if (mode === 'sign'     && !sigCtx)  initSigCanvas();
   if (mode === 'edit'     && pdfDoc)   detectTextBlocks(currentPage);
