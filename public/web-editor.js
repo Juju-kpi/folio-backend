@@ -208,8 +208,15 @@ async function renderPage(num) {
   currentPage = num;
   $('pageNum').textContent = num;
 
-  // Sauvegarder positions DOM des champs form avant clearOverlays
-  if (currentMode === 'form') saveFormFieldPositions();
+  // Sauvegarder positions des champs form avant clearOverlays
+  $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => {
+    const field = formFields.find(f => f.key === el.dataset.key);
+    if (!field) return;
+    field.initX = parseFloat(el.style.left) || field.initX;
+    field.initY = parseFloat(el.style.top)  || field.initY;
+    field.initW = el.offsetWidth  || field.initW;
+    field.initH = el.offsetHeight || field.initH;
+  });
 
   clearOverlays();
 
@@ -260,19 +267,6 @@ function clearOverlays() {
   $('pdfPageWrap')
     .querySelectorAll('.text-overlay, .annot-canvas, .block-overlay, .form-field-overlay, .form-free-overlay')
     .forEach(el => el.remove());
-}
-
-// ── Form fields : sauvegarde positions DOM → objets field ────────────────
-function saveFormFieldPositions() {
-  $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => {
-    const key = el.dataset.key;
-    const field = formFields.find(f => f.key === key);
-    if (!field) return;
-    field.initX = parseFloat(el.style.left) || field.initX;
-    field.initY = parseFloat(el.style.top)  || field.initY;
-    field.initW = el.offsetWidth  || field.initW;
-    field.initH = el.offsetHeight || field.initH;
-  });
 }
 
 // ── Signature page management ─────────────────────────────────────────────────
@@ -1282,9 +1276,19 @@ function switchMode(mode) {
 
   // Désactiver clic libre si on quitte form
   if (mode !== 'form' && formClickActive) deactivateFormClickMode();
+  // Quand on quitte form : garder les overlays visibles mais non-interactifs
   if (mode !== 'form') {
-    saveFormFieldPositions();
-    $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el=>el.remove());
+    $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el => {
+      el.style.pointerEvents = 'none';
+      el.style.cursor = 'default';
+    });
+  }
+  // Quand on revient sur form : réactiver les interactions
+  if (mode === 'form') {
+    $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el => {
+      el.style.pointerEvents = '';
+      el.style.cursor = 'move';
+    });
   }
 
   if (mode === 'sign'     && !sigCtx)  initSigCanvas();
