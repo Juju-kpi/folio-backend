@@ -208,16 +208,6 @@ async function renderPage(num) {
   currentPage = num;
   $('pageNum').textContent = num;
 
-  // Sauvegarder positions des champs form avant clearOverlays
-  $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => {
-    const field = formFields.find(f => f.key === el.dataset.key);
-    if (!field) return;
-    field.initX = parseFloat(el.style.left) || field.initX;
-    field.initY = parseFloat(el.style.top)  || field.initY;
-    field.initW = el.offsetWidth  || field.initW;
-    field.initH = el.offsetHeight || field.initH;
-  });
-
   clearOverlays();
 
   // Whiteout + redraw modified text blocks on canvas
@@ -487,10 +477,21 @@ $('applyProps').addEventListener('click', async () => {
   canvas.width  = vp.width; canvas.height = vp.height;
   await page.render({ canvasContext: ctx, viewport: vp }).promise;
   await redrawModificationsOnCanvas(ctx, vp, currentPage);
+  // Sauvegarder positions form avant clearOverlays
+  $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => {
+    const field = formFields.find(f => f.key === el.dataset.key);
+    if (!field) return;
+    field.initX = parseFloat(el.style.left) || field.initX;
+    field.initY = parseFloat(el.style.top)  || field.initY;
+    field.initW = el.offsetWidth  || field.initW;
+    field.initH = el.offsetHeight || field.initH;
+  });
   clearOverlays();
   await detectTextBlocks(currentPage);
   restoreSigsForPage(currentPage);
   redrawAnnotationsForPage(currentPage);
+  // Restaurer les overlays form (restent visibles même en mode edit)
+  restoreFormFieldsForPage(currentPage);
 
   webEditorToast('✓ Modification saved', 'success');
   updateCreditsDisplay();
@@ -1276,14 +1277,12 @@ function switchMode(mode) {
 
   // Désactiver clic libre si on quitte form
   if (mode !== 'form' && formClickActive) deactivateFormClickMode();
-  // Quand on quitte form : garder les overlays visibles mais non-interactifs
   if (mode !== 'form') {
     $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el => {
       el.style.pointerEvents = 'none';
       el.style.cursor = 'default';
     });
   }
-  // Quand on revient sur form : réactiver les interactions
   if (mode === 'form') {
     $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el => {
       el.style.pointerEvents = '';
