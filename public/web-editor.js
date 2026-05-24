@@ -208,6 +208,9 @@ async function renderPage(num) {
   currentPage = num;
   $('pageNum').textContent = num;
 
+  // Sauvegarder positions DOM des champs form avant clearOverlays
+  if (currentMode === 'form') saveFormFieldPositions();
+
   clearOverlays();
 
   // Whiteout + redraw modified text blocks on canvas
@@ -257,6 +260,19 @@ function clearOverlays() {
   $('pdfPageWrap')
     .querySelectorAll('.text-overlay, .annot-canvas, .block-overlay, .form-field-overlay, .form-free-overlay')
     .forEach(el => el.remove());
+}
+
+// ── Form fields : sauvegarde positions DOM → objets field ────────────────
+function saveFormFieldPositions() {
+  $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => {
+    const key = el.dataset.key;
+    const field = formFields.find(f => f.key === key);
+    if (!field) return;
+    field.initX = parseFloat(el.style.left) || field.initX;
+    field.initY = parseFloat(el.style.top)  || field.initY;
+    field.initW = el.offsetWidth  || field.initW;
+    field.initH = el.offsetHeight || field.initH;
+  });
 }
 
 // ── Signature page management ─────────────────────────────────────────────────
@@ -730,7 +746,7 @@ async function detectAndRenderFormFields(pageNum) {
   const vp     = page.getViewport({ scale: zoom * 1.5 });
   const annots = await page.getAnnotations();
 
-  // Remove old overlays (but keep free fields in formFields so they can be restored)
+  // Remove old overlays (garder les champs free dans formFields pour restauration)
   $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => el.remove());
   formFields = formFields.filter(f => !(f.pageNum === pageNum && f.type !== 'free'));
 
@@ -1267,18 +1283,8 @@ function switchMode(mode) {
   // Désactiver clic libre si on quitte form
   if (mode !== 'form' && formClickActive) deactivateFormClickMode();
   if (mode !== 'form') {
-    // Sauvegarder positions actuelles (drag/resize) avant de supprimer les overlays
-    $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el => {
-      const key = el.dataset.key;
-      const field = formFields.find(f => f.key === key);
-      if (field) {
-        field.initX = parseFloat(el.style.left) || field.initX;
-        field.initY = parseFloat(el.style.top)  || field.initY;
-        field.initW = el.offsetWidth  || field.initW;
-        field.initH = el.offsetHeight || field.initH;
-      }
-      el.remove();
-    });
+    saveFormFieldPositions();
+    $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el=>el.remove());
   }
 
   if (mode === 'sign'     && !sigCtx)  initSigCanvas();
