@@ -229,6 +229,19 @@
       padding: 1px 5px; border-radius: 4px; margin-left: 4px; vertical-align: middle;
     }
 
+    /* Form field overlays */
+    .form-field-overlay {
+      position: absolute; cursor: text;
+      border: 2px solid var(--accent); border-radius: 3px;
+      background: rgba(232,255,71,0.06); box-sizing: border-box;
+      transition: background 0.1s, border-color 0.1s;
+    }
+    .form-field-overlay:hover { background: rgba(232,255,71,0.13); }
+    .form-status-msg { font-size:11px; padding:4px 2px 8px; line-height:1.5; }
+    .form-status-success { color: var(--success); }
+    .form-status-warn    { color: var(--warn); }
+    .form-status-muted   { color: var(--muted); }
+
     /* PROPS PANEL */
     .prop-row { margin-bottom: 10px; }
     .prop-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
@@ -503,6 +516,7 @@
 
     <div class="mode-tabs">
       <button class="mode-tab active" data-mode="edit">✏️ Edit</button>
+      <button class="mode-tab" data-mode="form">📝 Form</button>
       <button class="mode-tab" data-mode="sign">✍️ Sign</button>
       <button class="mode-tab" data-mode="merge">🗂️ Merge</button>
       <button class="mode-tab" data-mode="extract">✂️ Extract</button>
@@ -781,6 +795,32 @@
           <div class="progress-bar-wrap" id="convertProgress">
             <div class="progress-bar-fill" id="convertBar"></div>
           </div>
+        </div>
+      </div>
+
+      <div id="sidebarForm" class="hidden">
+        <div class="sidebar-section">
+          <div class="sidebar-title">
+            Form fill
+            <span class="mod-badge hidden" id="formBadge">0 filled</span>
+          </div>
+          <div id="formStatusMsg" class="form-status-msg form-status-muted">
+            Open a PDF to detect form fields
+          </div>
+          <div class="block-list" id="formFieldList">
+            <div style="color:var(--muted);font-size:11px;padding:8px 4px;">Open a PDF to detect fields</div>
+          </div>
+        </div>
+        <div class="sidebar-section">
+          <button class="apply-btn" id="btnFormClickToggle" style="margin-top:0;background:var(--bg4);color:var(--text);border:1px solid var(--border2);">
+            🖱️ Enable click mode
+          </button>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;line-height:1.5;">
+            Click anywhere on the PDF to place a free-form text field, even if no form fields are detected.
+          </div>
+          <button class="apply-btn" id="btnFormClear" style="margin-top:10px;background:rgba(255,71,87,0.15);border:1px solid rgba(255,71,87,0.3);color:var(--danger);">
+            🗑 Clear all fields
+          </button>
         </div>
       </div>
 
