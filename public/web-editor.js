@@ -730,9 +730,9 @@ async function detectAndRenderFormFields(pageNum) {
   const vp     = page.getViewport({ scale: zoom * 1.5 });
   const annots = await page.getAnnotations();
 
-  // Remove old overlays
+  // Remove old overlays (but keep free fields in formFields so they can be restored)
   $('pdfPageWrap').querySelectorAll('.form-field-overlay').forEach(el => el.remove());
-  formFields = formFields.filter(f => f.pageNum !== pageNum);
+  formFields = formFields.filter(f => !(f.pageNum === pageNum && f.type !== 'free'));
 
   const acroFields = annots.filter(a => a.subtype === 'Widget' && a.fieldType);
 
@@ -1267,7 +1267,7 @@ function switchMode(mode) {
   // Désactiver clic libre si on quitte form
   if (mode !== 'form' && formClickActive) deactivateFormClickMode();
   if (mode !== 'form') {
-    // Sauvegarder les positions actuelles des champs avant de supprimer les overlays
+    // Sauvegarder positions actuelles (drag/resize) avant de supprimer les overlays
     $('pdfPageWrap').querySelectorAll('.form-field-overlay,.form-free-overlay').forEach(el => {
       const key = el.dataset.key;
       const field = formFields.find(f => f.key === key);
@@ -1276,11 +1276,6 @@ function switchMode(mode) {
         field.initY = parseFloat(el.style.top)  || field.initY;
         field.initW = el.offsetWidth  || field.initW;
         field.initH = el.offsetHeight || field.initH;
-        // Mettre à jour les coords PDF si on a un vp valide
-        const val = formFieldValues.get(key);
-        if (val && pdfDoc) {
-          val.pdfX = field.initX / (zoom * 1.5);
-        }
       }
       el.remove();
     });
@@ -1295,7 +1290,7 @@ function switchMode(mode) {
   }
   if (mode === 'extract'  && pdfDoc && !$('thumbGrid').children.length) buildThumbnails();
   if (mode === 'merge'    && rawPdfBytes) syncMergeCurrentFile(fileName);
-  if (mode === 'form'     && pdfDoc)   detectAndRenderFormFields(currentPage);
+  if (mode === 'form'     && pdfDoc)   detectAndRenderFormFields(currentPage).then(() => restoreFormFieldsForPage(currentPage));
 }
 
 // ── Signature ─────────────────────────────────────────────────────────────────
