@@ -7,7 +7,7 @@
 //   - Else if credits > 0          → allow, credits -= 1
 //   - Else                         → deny
 
-const FREE_SESSIONS = 4;  // ← nombre de sessions gratuites offertes à chaque nouvel utilisateur
+const FREE_SESSIONS = 5;  // ← nombre de sessions gratuites offertes à chaque nouvel utilisateur
 
 // ── IP rate limiter (in-memory, resets on cold start) ────────────────────────
 const MAX_PER_WINDOW = 5;
