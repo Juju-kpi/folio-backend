@@ -5,9 +5,10 @@
 import Stripe from 'stripe';
 
 const PACKS = {
-  '1':  { credits: 1,  price_cts: 50,  label: '1 session d\'édition'   },
-  '5':  { credits: 5,  price_cts: 100, label: '5 sessions d\'édition'  },
-  '20': { credits: 20, price_cts: 300, label: '20 sessions d\'édition' }
+  '1':        { credits: 1,  price_cts: 50,   label: '1 session d\'édition'            },
+  '5':        { credits: 5,  price_cts: 100,  label: '5 sessions d\'édition'           },
+  '20':       { credits: 20, price_cts: 300,  label: '20 sessions d\'édition'          },
+  'lifetime': { credits: 0,  price_cts: 1499, label: 'Accès illimité à vie'            }
 };
 
 export default async function handler(req, res) {
@@ -43,7 +44,8 @@ export default async function handler(req, res) {
       metadata: {
         uid,
         credits: String(selected.credits),
-        pack
+        pack,
+        lifetime: pack === 'lifetime' ? 'true' : 'false'
       },
       // After payment, redirect back to the extension's payment-success page
       success_url: `${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'http://localhost:3000'}/payment-success.html?session_id={CHECKOUT_SESSION_ID}`,

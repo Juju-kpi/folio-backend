@@ -207,6 +207,26 @@ const WebPayment = (() => {
             <div style="background:#e8ff47; color:#0c0c0f; font-family:'Syne',sans-serif; font-weight:800; font-size:16px; padding:6px 16px; border-radius:8px; flex-shrink:0;">€3</div>
           </button>
 
+          <button class="fpay-pack" data-pack="lifetime" style="
+            background: linear-gradient(135deg,#1a1a2e,#16213e);
+            border: 1px solid rgba(232,255,71,0.6); border-radius: 12px;
+            padding: 14px 18px; display:flex; align-items:center; justify-content:space-between;
+            cursor:pointer; position:relative; transition:all 0.15s; width:100%;
+          ">
+            <div style="
+              position:absolute; top:-11px; right:14px;
+              background: linear-gradient(90deg,#e8ff47,#b8ff00); color:#0c0c0f;
+              font-family:'Syne',sans-serif; font-weight:800; font-size:10px;
+              padding:2px 12px; border-radius:20px; white-space:nowrap;
+              text-transform:uppercase; letter-spacing:0.5px;
+            ">✦ Lifetime</div>
+            <div style="text-align:left;">
+              <div style="color:#f0f0f0; font-weight:600; font-size:15px; font-family:'Syne',sans-serif;">Unlimited — forever</div>
+              <div style="color:#a0c070; font-size:12px; margin-top:3px;">All edits, for life — one-time payment</div>
+            </div>
+            <div style="background:linear-gradient(90deg,#e8ff47,#b8ff00); color:#0c0c0f; font-family:'Syne',sans-serif; font-weight:800; font-size:16px; padding:6px 16px; border-radius:8px; flex-shrink:0;">€14.99</div>
+          </button>
+
         </div>
 
         <div id="fpay-loading" style="display:none; text-align:center; padding:12px; color:#888899; font-size:14px;"></div>
@@ -224,13 +244,20 @@ const WebPayment = (() => {
 
     overlay.querySelectorAll('.fpay-pack').forEach(btn => {
       btn.addEventListener('mouseenter', () => {
-        btn.style.borderColor = btn.dataset.pack === '5' ? 'rgba(232,255,71,0.7)' : 'rgba(232,255,71,0.4)';
-        btn.style.background = btn.dataset.pack === '5' ? '#1f2a14' : '#252535';
+        btn.style.borderColor = btn.dataset.pack === '5' ? 'rgba(232,255,71,0.7)'
+                              : btn.dataset.pack === 'lifetime' ? 'rgba(232,255,71,0.9)'
+                              : 'rgba(232,255,71,0.4)';
+        btn.style.background = btn.dataset.pack === '5' ? '#1f2a14'
+                              : btn.dataset.pack === 'lifetime' ? '#1e2040'
+                              : '#252535';
       });
       btn.addEventListener('mouseleave', () => {
         if (btn.dataset.pack === '5') {
           btn.style.borderColor = 'rgba(232,255,71,0.4)';
           btn.style.background = '#1a2010';
+        } else if (btn.dataset.pack === 'lifetime') {
+          btn.style.borderColor = 'rgba(232,255,71,0.6)';
+          btn.style.background = 'linear-gradient(135deg,#1a1a2e,#16213e)';
         } else {
           btn.style.borderColor = 'rgba(255,255,255,0.1)';
           btn.style.background = '#1e1e2a';
