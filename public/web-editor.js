@@ -164,7 +164,7 @@ async function loadPDFFromDataURL(dataURL, name = 'document.pdf', isNew = true) 
     $('totalPagesSpan').textContent = totalPages;
 
     showLoading('Loading pdf-lib…');
-    pdfLibDoc  = await PDFLib.PDFDocument.load(rawPdfBytes.slice(), { ignoreEncryption: true });
+    pdfLibDoc  = await PDFLib.PDFDocument.load(rawPdfBytes.slice(), { ignoreEncryption: true, throwOnInvalidObject: false, capNumbers: true });
     if (typeof fontkit !== 'undefined') pdfLibDoc.registerFontkit(fontkit);
 
     $('emptyState').classList.add('hidden');
@@ -509,7 +509,7 @@ function updateModBadge() {
 
 // ── Build modified PDF (source of truth) ─────────────────────────────────────
 async function buildModifiedPdfBytes() {
-  const editDoc   = await PDFLib.PDFDocument.load(rawPdfBytes, { ignoreEncryption: true });
+  const editDoc   = await PDFLib.PDFDocument.load(rawPdfBytes, { ignoreEncryption: true, throwOnInvalidObject: false, capNumbers: true });
   if (typeof fontkit !== 'undefined') editDoc.registerFontkit(fontkit);
   const fontCache = {};
 
@@ -1674,12 +1674,12 @@ $('btnMergeDo').addEventListener('click', async () => {
         srcBytes = await buildModifiedPdfBytes();
       }
       restoreSigsForPage(currentPage);
-      const srcDoc = await PDFLib.PDFDocument.load(srcBytes, { ignoreEncryption: true });
+      const srcDoc = await PDFLib.PDFDocument.load(srcBytes, { ignoreEncryption: true, throwOnInvalidObject: false, capNumbers: true });
       (await mergedDoc.copyPages(srcDoc, srcDoc.getPageIndices())).forEach(p => mergedDoc.addPage(p));
     }
 
     for (const file of mergeFiles) {
-      const srcDoc = await PDFLib.PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true });
+      const srcDoc = await PDFLib.PDFDocument.load(await file.arrayBuffer(), { ignoreEncryption: true, throwOnInvalidObject: false, capNumbers: true });
       (await mergedDoc.copyPages(srcDoc, srcDoc.getPageIndices())).forEach(p => mergedDoc.addPage(p));
     }
 
