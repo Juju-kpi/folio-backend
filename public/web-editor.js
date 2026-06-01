@@ -507,6 +507,28 @@ function updateModBadge() {
   }
 }
 
+// ── Tolerant pdf-lib save ─────────────────────────────────────────────────────
+// Some PDFs have corrupt indirect object references in their page tree (e.g. "97 0 R"
+// pointing to a non-existent object). pdf-lib throws "Expected instance of e" when it
+// tries to resolve these during save(). We monkey-patch context.lookup temporarily so
+// invalid refs return PDFNull instead of crashing, then restore the original after.
+async function pdfLibSafeSave(doc) {
+  const ctx = doc.context;
+  const origLookup = ctx.lookup.bind(ctx);
+  ctx.lookup = (ref, ...args) => {
+    try { return origLookup(ref, ...args); }
+    catch(e) {
+      console.warn('[Folio] pdfLibSafeSave: skipping invalid ref', ref && ref.toString ? ref.toString() : ref);
+      return PDFLib.PDFNull;
+    }
+  };
+  try {
+    return await doc.save();
+  } finally {
+    ctx.lookup = origLookup;
+  }
+}
+
 // ── Build modified PDF (source of truth) ─────────────────────────────────────
 async function buildModifiedPdfBytes() {
   const editDoc   = await PDFLib.PDFDocument.load(rawPdfBytes, { ignoreEncryption: true, throwOnInvalidObject: false, capNumbers: true });
@@ -720,7 +742,7 @@ async function buildModifiedPdfBytes() {
   // ── 5. Champs formulaire ────────────────────────────────────────────────
   await embedFormFieldsInPdf(editDoc, getFont);
 
-  return editDoc.save();
+  return pdfLibSafeSave(editDoc);
 }
 
 
