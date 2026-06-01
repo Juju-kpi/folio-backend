@@ -508,15 +508,31 @@ function updateModBadge() {
 }
 
 // ── Patch pdf-lib to tolerate corrupt page trees ─────────────────────────────
-// Some PDFs have broken indirect object references (e.g. "703 0 R" pointing to a
-// non-existent object). pdf-lib's PDFPageTree.traverse() calls context.lookup(kidRef)
-// which returns undefined for missing refs, then immediately crashes trying to call
-// .traverse() on that undefined value.
-// We patch the prototype ONCE at startup so traverse() silently skips invalid kids
-// instead of throwing. This is safe for normal PDFs — valid kids are unaffected.
+// Some PDFs have broken indirect object references in their page tree catalog.
+// Two patches applied once at startup:
+//
+// 1. PDFCatalog.prototype.Pages — the catalog's /Pages entry may point to a
+//    corrupt/missing object. Instead of throwing, return an empty PDFPageTree
+//    so getPages() / getPageCount() / save() can proceed gracefully.
+//
+// 2. PDFPageTree.prototype.traverse — individual kid refs inside the page tree
+//    may also be unresolvable. Skip them silently instead of crashing.
+//
+// Both patches are no-ops on well-formed PDFs.
 (function patchPdfLibPageTree() {
-  if (!PDFLib || !PDFLib.PDFPageTree) return;
-  const _origTraverse = PDFLib.PDFPageTree.prototype.traverse;
+  if (!PDFLib || !PDFLib.PDFCatalog || !PDFLib.PDFPageTree) return;
+
+  // Patch 1: PDFCatalog.Pages
+  const _origPages = PDFLib.PDFCatalog.prototype.Pages;
+  PDFLib.PDFCatalog.prototype.Pages = function() {
+    try { return _origPages.call(this); }
+    catch(e) {
+      console.warn('[Folio] PDFCatalog.Pages corrupt, using empty page tree:', e.message);
+      return PDFLib.PDFPageTree.withContext(this.context);
+    }
+  };
+
+  // Patch 2: PDFPageTree.traverse
   PDFLib.PDFPageTree.prototype.traverse = function(visitor) {
     const Kids = this.Kids();
     for (let idx = 0, len = Kids.size(); idx < len; idx++) {
@@ -526,10 +542,7 @@ function updateModBadge() {
         console.warn('[Folio] traverse: skipping unresolvable kid ref', kidRef && kidRef.toString ? kidRef.toString() : kidRef);
         continue;
       }
-      if (kid == null) {
-        console.warn('[Folio] traverse: skipping null/undefined kid at index', idx);
-        continue;
-      }
+      if (kid == null) continue;
       if (kid instanceof PDFLib.PDFPageTree) kid.traverse(visitor);
       visitor(kid, kidRef);
     }
