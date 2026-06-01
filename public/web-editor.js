@@ -1115,16 +1115,29 @@ function deactivateFormClickMode() {
 // ── Embed form fields into PDF on export ────────────────────────────────────
 async function embedFormFieldsInPdf(editDoc, loadFont) {
   if (formFieldValues.size === 0) return;
+
+  // Cache pages safely — some PDFs have corrupt page trees (invalid object refs).
+  // We build the cache once and skip pages that can't be resolved rather than crashing.
+  const pageCache = {};
+  const getPageSafe = (idx) => {
+    if (pageCache[idx] !== undefined) return pageCache[idx];
+    try { pageCache[idx] = editDoc.getPage(idx); }
+    catch(e) { console.warn('[Folio] embedFormFields: could not get page', idx, e.message); pageCache[idx] = null; }
+    return pageCache[idx];
+  };
+
   for (const [key, val] of formFieldValues.entries()) {
     if (!val || !val.text) continue;
-    const pageIdx = (val.pageNum || 1) - 1;
-    const page    = editDoc.getPage(pageIdx);
 
-    // Try AcroForm native first
+    // Try AcroForm native first — does NOT require getPage()
     if (val.isAcro && val.fieldName) {
       try { editDoc.getForm().getTextField(val.fieldName).setText(val.text); continue; }
       catch(e) { /* fallback to drawText */ }
     }
+
+    const pageIdx = (val.pageNum || 1) - 1;
+    const page    = getPageSafe(pageIdx);
+    if (!page) continue;  // skip fields on unresolvable pages
 
     const font = await loadFont(editDoc, val.font || 'Helvetica');
     const fs   = val.fontSize || 11;
@@ -1139,8 +1152,10 @@ async function embedFormFieldsInPdf(editDoc, loadFont) {
     const g   = parseInt(hex.slice(2,4),16)/255;
     const b   = parseInt(hex.slice(4,6),16)/255;
 
-    page.drawRectangle({ x: pdfX - 1, y: pdfY - 2, width: pdfW + 2, height: pdfH + 4, color: PDFLib.rgb(1,1,1), opacity: 1 });
-    page.drawText(val.text, { x: pdfX + 2, y: pdfY + 2, size: fs, font, color: PDFLib.rgb(r,g,b), maxWidth: pdfW - 4 });
+    try {
+      page.drawRectangle({ x: pdfX - 1, y: pdfY - 2, width: pdfW + 2, height: pdfH + 4, color: PDFLib.rgb(1,1,1), opacity: 1 });
+      page.drawText(val.text, { x: pdfX + 2, y: pdfY + 2, size: fs, font, color: PDFLib.rgb(r,g,b), maxWidth: pdfW - 4 });
+    } catch(e) { console.warn('[Folio] embedFormFields: drawText failed on page', pageIdx, e.message); }
   }
 }
 
