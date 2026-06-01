@@ -508,30 +508,27 @@ function updateModBadge() {
 }
 
 // ── Patch pdf-lib to tolerate corrupt page trees ─────────────────────────────
-// Some PDFs have broken indirect object references in their page tree catalog.
+// Some PDFs (typically AcroForms with protected/licensed fields) have broken indirect
+// object references. The /Pages catalog entry and widget annotation refs point to
+// objects that don't exist in the file.
+//
 // Two patches applied once at startup:
+// 1. PDFCatalog.prototype.Pages — rebuild the page tree from actual PDFPageLeaf objects
+//    found in the context, rather than crashing on the corrupt /Pages ref.
+// 2. PDFPageTree.prototype.traverse — skip individual kid refs that can't be resolved.
 //
-// 1. PDFCatalog.prototype.Pages — the catalog's /Pages entry may point to a
-//    corrupt/missing object. Instead of throwing, return an empty PDFPageTree
-//    so getPages() / getPageCount() / save() can proceed gracefully.
-//
-// 2. PDFPageTree.prototype.traverse — individual kid refs inside the page tree
-//    may also be unresolvable. Skip them silently instead of crashing.
-//
-// Both patches are no-ops on well-formed PDFs.
+// When patch 1 fires, we set a flag on the document so pdfLibSafeSave() knows to
+// strip the AcroForm and page Annots (which contain the broken widget refs) before
+// saving — otherwise the corrupt refs survive into the output and readers reject it.
 (function patchPdfLibPageTree() {
   if (!PDFLib || !PDFLib.PDFCatalog || !PDFLib.PDFPageTree) return;
 
-  // Patch 1: PDFCatalog.Pages
-  // If the catalog's /Pages ref is corrupt, rebuild a valid page tree by
-  // scanning all PDFPageLeaf objects already parsed into the context.
-  // This produces a real page tree instead of an empty one, so the exported
-  // PDF opens correctly in all readers.
+  // Patch 1: PDFCatalog.Pages — rebuild from context on corruption
   const _origPages = PDFLib.PDFCatalog.prototype.Pages;
   PDFLib.PDFCatalog.prototype.Pages = function() {
     try { return _origPages.call(this); }
     catch(e) {
-      console.warn('[Folio] PDFCatalog.Pages corrupt — rebuilding page tree from context:', e.message);
+      console.warn('[Folio] PDFCatalog.Pages corrupt — rebuilding page tree:', e.message);
       const newTree    = PDFLib.PDFPageTree.withContext(this.context);
       const newTreeRef = this.context.register(newTree);
       let count = 0;
@@ -542,13 +539,15 @@ function updateModBadge() {
           count++;
         }
       }
-      console.warn('[Folio] Rebuilt page tree with', count, 'page(s)');
       this.set(PDFLib.PDFName.of('Pages'), newTreeRef);
+      console.warn('[Folio] Rebuilt page tree with', count, 'page(s)');
+      // Flag the document so save() strips corrupt AcroForm/Annots refs
+      this._folioPageTreeRebuilt = true;
       return newTree;
     }
   };
 
-  // Patch 2: PDFPageTree.traverse
+  // Patch 2: PDFPageTree.traverse — skip unresolvable kid refs
   PDFLib.PDFPageTree.prototype.traverse = function(visitor) {
     const Kids = this.Kids();
     for (let idx = 0, len = Kids.size(); idx < len; idx++) {
@@ -565,7 +564,21 @@ function updateModBadge() {
   };
 })();
 
-async function pdfLibSafeSave(doc) { return doc.save(); }
+async function pdfLibSafeSave(doc) {
+  // If the page tree was rebuilt from a corrupt catalog, the AcroForm and page
+  // Annots arrays contain broken widget refs that make the output unreadable.
+  // Strip them — field values were already drawn as flat text by embedFormFieldsInPdf.
+  if (doc.catalog._folioPageTreeRebuilt) {
+    console.warn('[Folio] Corrupt AcroForm detected — stripping AcroForm and Annots for clean export');
+    try { doc.catalog.delete(PDFLib.PDFName.of('AcroForm')); } catch(e) {}
+    try {
+      for (const page of doc.getPages()) {
+        try { page.node.delete(PDFLib.PDFName.of('Annots')); } catch(e) {}
+      }
+    } catch(e) {}
+  }
+  return doc.save();
+}
 
 // ── Build modified PDF (source of truth) ─────────────────────────────────────
 async function buildModifiedPdfBytes() {
