@@ -523,12 +523,28 @@ function updateModBadge() {
   if (!PDFLib || !PDFLib.PDFCatalog || !PDFLib.PDFPageTree) return;
 
   // Patch 1: PDFCatalog.Pages
+  // If the catalog's /Pages ref is corrupt, rebuild a valid page tree by
+  // scanning all PDFPageLeaf objects already parsed into the context.
+  // This produces a real page tree instead of an empty one, so the exported
+  // PDF opens correctly in all readers.
   const _origPages = PDFLib.PDFCatalog.prototype.Pages;
   PDFLib.PDFCatalog.prototype.Pages = function() {
     try { return _origPages.call(this); }
     catch(e) {
-      console.warn('[Folio] PDFCatalog.Pages corrupt, using empty page tree:', e.message);
-      return PDFLib.PDFPageTree.withContext(this.context);
+      console.warn('[Folio] PDFCatalog.Pages corrupt — rebuilding page tree from context:', e.message);
+      const newTree    = PDFLib.PDFPageTree.withContext(this.context);
+      const newTreeRef = this.context.register(newTree);
+      let count = 0;
+      for (const [ref, obj] of this.context.indirectObjects) {
+        if (obj instanceof PDFLib.PDFPageLeaf) {
+          obj.setParent(newTreeRef);
+          newTree.pushLeafNode(ref);
+          count++;
+        }
+      }
+      console.warn('[Folio] Rebuilt page tree with', count, 'page(s)');
+      this.set(PDFLib.PDFName.of('Pages'), newTreeRef);
+      return newTree;
     }
   };
 
