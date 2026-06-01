@@ -507,27 +507,36 @@ function updateModBadge() {
   }
 }
 
-// ── Tolerant pdf-lib save ─────────────────────────────────────────────────────
-// Some PDFs have corrupt indirect object references in their page tree (e.g. "97 0 R"
-// pointing to a non-existent object). pdf-lib throws "Expected instance of e" when it
-// tries to resolve these during save(). We monkey-patch context.lookup temporarily so
-// invalid refs return PDFNull instead of crashing, then restore the original after.
-async function pdfLibSafeSave(doc) {
-  const ctx = doc.context;
-  const origLookup = ctx.lookup.bind(ctx);
-  ctx.lookup = (ref, ...args) => {
-    try { return origLookup(ref, ...args); }
-    catch(e) {
-      console.warn('[Folio] pdfLibSafeSave: skipping invalid ref', ref && ref.toString ? ref.toString() : ref);
-      return PDFLib.PDFNull;
+// ── Patch pdf-lib to tolerate corrupt page trees ─────────────────────────────
+// Some PDFs have broken indirect object references (e.g. "703 0 R" pointing to a
+// non-existent object). pdf-lib's PDFPageTree.traverse() calls context.lookup(kidRef)
+// which returns undefined for missing refs, then immediately crashes trying to call
+// .traverse() on that undefined value.
+// We patch the prototype ONCE at startup so traverse() silently skips invalid kids
+// instead of throwing. This is safe for normal PDFs — valid kids are unaffected.
+(function patchPdfLibPageTree() {
+  if (!PDFLib || !PDFLib.PDFPageTree) return;
+  const _origTraverse = PDFLib.PDFPageTree.prototype.traverse;
+  PDFLib.PDFPageTree.prototype.traverse = function(visitor) {
+    const Kids = this.Kids();
+    for (let idx = 0, len = Kids.size(); idx < len; idx++) {
+      const kidRef = Kids.get(idx);
+      let kid;
+      try { kid = this.context.lookup(kidRef); } catch(e) {
+        console.warn('[Folio] traverse: skipping unresolvable kid ref', kidRef && kidRef.toString ? kidRef.toString() : kidRef);
+        continue;
+      }
+      if (kid == null) {
+        console.warn('[Folio] traverse: skipping null/undefined kid at index', idx);
+        continue;
+      }
+      if (kid instanceof PDFLib.PDFPageTree) kid.traverse(visitor);
+      visitor(kid, kidRef);
     }
   };
-  try {
-    return await doc.save();
-  } finally {
-    ctx.lookup = origLookup;
-  }
-}
+})();
+
+async function pdfLibSafeSave(doc) { return doc.save(); }
 
 // ── Build modified PDF (source of truth) ─────────────────────────────────────
 async function buildModifiedPdfBytes() {
