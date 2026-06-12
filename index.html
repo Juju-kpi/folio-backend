@@ -375,8 +375,8 @@
       border-bottom: 1px solid var(--border); transition: background 0.2s;
     }
     .feature-card:hover { background: var(--bg3); }
-    .feature-card:nth-child(3), .feature-card:nth-child(6) { border-right: none; }
-    .feature-card:nth-child(4), .feature-card:nth-child(5), .feature-card:nth-child(6) { border-bottom: none; }
+    .feature-card:nth-child(3n) { border-right: none; }
+    .feature-card:nth-child(n+4) { border-bottom: none; }
 
     .feature-icon {
       width: 48px; height: 48px; border-radius: 12px;
@@ -589,8 +589,10 @@
     /* RESPONSIVE */
     @media (max-width: 900px) {
       .features-grid { grid-template-columns: repeat(2, 1fr); }
-      .features-grid .feature-card:nth-child(3) { border-right: 1px solid var(--border); }
-      .features-grid .feature-card:nth-child(2), .features-grid .feature-card:nth-child(4) { border-right: none; }
+      .features-grid .feature-card:nth-child(3n) { border-right: 1px solid var(--border); }
+      .features-grid .feature-card:nth-child(2n) { border-right: none; }
+      .features-grid .feature-card:nth-child(n+5) { border-bottom: none; }
+      .features-grid .feature-card:nth-child(n+4) { border-bottom: 1px solid var(--border); }
       .pricing-grid { grid-template-columns: 1fr; max-width: 440px; margin-left: auto; margin-right: auto; }
       .how-grid { grid-template-columns: 1fr; gap: 24px; }
       .tool-strip-inner { grid-template-columns: repeat(3, 1fr); }
@@ -722,7 +724,7 @@
       <h2 class="section-title">Everything your PDF needs</h2>
       <p class="section-sub">A complete PDF toolkit running entirely in your browser. Every operation — editing, signing, converting — happens locally. Your documents are never transmitted anywhere.</p>
     </div>
-    <div class="features-grid reveal">
+    <div class="features-grid">
       <div class="feature-card">
         <div class="feature-icon">✏️</div>
         <div class="feature-title">Line-by-line Text Editing</div>
