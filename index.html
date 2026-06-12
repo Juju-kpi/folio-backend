@@ -3,10 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Folio PDF Studio — Edit PDFs with elegance</title>
-  <meta name="description" content="Edit, sign, convert and transform your PDFs with elegance. Text editing, signature drawing, PDF merging and more — right from your browser.">
+  <meta name="google-site-verification" content="MDwk3dbExiZ3tM_2P8F974qdG69cCMM_KfMOSB7UpfI" />
+
+  <title>ForgePDF — Free Online PDF Editor. Edit, Sign & Convert PDFs</title>
+  <meta name="description" content="ForgePDF is a free online PDF editor. Edit text line by line, fill forms, add e-signatures, merge, split, annotate and convert PDFs — no upload, no account, no subscription. Everything runs locally in your browser.">
+  <meta name="keywords" content="free PDF editor online, edit PDF text online, PDF to Word converter, sign PDF online, merge PDF files, PDF annotator, convert PDF to JPG, PDF tool browser, Chrome PDF extension, ilovepdf alternative">
+  <link rel="canonical" href="https://folio-backend-ebon.vercel.app/">
+
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://folio-backend-ebon.vercel.app/">
+  <meta property="og:title" content="ForgePDF — Free Online PDF Editor. Edit, Sign & Convert PDFs">
+  <meta property="og:description" content="Edit text, sign, merge, annotate and convert PDFs directly in your browser. Your files never leave your device. Private, instant, no account needed.">
+  <meta property="og:image" content="https://folio-backend-ebon.vercel.app/og-image.png">
+  <meta property="og:site_name" content="ForgePDF">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ForgePDF — Free Online PDF Editor. Edit, Sign & Convert PDFs">
+  <meta name="twitter:description" content="Free online PDF editor. Edit text, sign, merge, split & convert. No account, no upload. First session free.">
+  <meta name="twitter:image" content="https://folio-backend-ebon.vercel.app/og-image.png">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["SoftwareApplication", "WebApplication"],
+    "name": "ForgePDF",
+    "alternateName": "ForgePDF Studio",
+    "applicationCategory": "UtilitiesApplication",
+    "operatingSystem": "Web, Chrome",
+    "browserRequirements": "Requires JavaScript. Requires a modern browser (Chrome, Firefox, Safari, Edge).",
+    "featureList": "Edit PDF text, Sign PDF, Merge PDFs, Split PDF, Annotate PDF, Convert PDF to Word, Convert PDF to JPG",
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "Free",
+        "price": "0",
+        "priceCurrency": "EUR",
+        "description": "Signing, merging, annotating and converting PDFs are always free."
+      },
+      {
+        "@type": "Offer",
+        "name": "Text editing — 1 session",
+        "price": "0.50",
+        "priceCurrency": "EUR",
+        "description": "1 text-editing session. Credits never expire."
+      }
+    ],
+    "description": "Free online PDF editor. Edit text, sign, merge, split, annotate and convert PDFs directly in your browser. Your files never leave your device.",
+    "url": "https://folio-backend-ebon.vercel.app/",
+    "screenshot": "https://folio-backend-ebon.vercel.app/og-image.png"
+  }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -16,11 +66,13 @@
       --bg3:     #18181d;
       --bg4:     #1f1f28;
       --border:  rgba(255,255,255,0.07);
-      --border2: rgba(255,255,255,0.12);
+      --border2: rgba(255,255,255,0.13);
       --accent:  #e8ff47;
+      --accent2: #7b61ff;
       --text:    #f0f0f0;
       --text2:   #a0a0b0;
       --muted:   #555568;
+      --green:   #4ade80;
     }
 
     html { scroll-behavior: smooth; }
@@ -34,116 +86,73 @@
       overflow-x: hidden;
     }
 
-    /* ── NOISE TEXTURE OVERLAY ── */
     body::before {
       content: '';
-      position: fixed;
-      inset: 0;
+      position: fixed; inset: 0;
       background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.035'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.5;
+      pointer-events: none; z-index: 0; opacity: 0.5;
     }
 
-    /* ── NAV ── */
+    /* NAV */
     nav {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 100;
-      padding: 0 48px;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background: rgba(12,12,15,0.85);
-      backdrop-filter: blur(20px);
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      padding: 0 48px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(12,12,15,0.88); backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--border);
     }
 
-    .nav-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 
     .nav-logo-mark {
-      width: 32px; height: 32px;
-      background: var(--accent);
-      border-radius: 8px;
+      width: 32px; height: 32px; background: var(--accent); border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 16px;
-      color: #0c0c0f;
-      flex-shrink: 0;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px; color: #0c0c0f;
     }
 
     .nav-logo-text {
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 17px;
-      color: var(--text);
-      letter-spacing: -0.2px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 17px;
+      color: var(--text); letter-spacing: -0.2px;
     }
 
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 32px;
-      list-style: none;
-    }
-
+    .nav-links { display: flex; align-items: center; gap: 28px; list-style: none; }
     .nav-links a {
-      color: var(--text2);
-      text-decoration: none;
-      font-size: 14px;
-      font-weight: 500;
-      transition: color 0.15s;
+      color: var(--text2); text-decoration: none; font-size: 14px;
+      font-weight: 500; transition: color 0.15s;
     }
     .nav-links a:hover { color: var(--text); }
 
     .nav-cta {
-      background: var(--accent) !important;
-      color: #0c0c0f !important;
-      font-family: 'Syne', sans-serif !important;
-      font-weight: 700 !important;
-      font-size: 13px !important;
-      padding: 8px 18px;
-      border-radius: 8px;
-      transition: background 0.15s !important;
+      background: var(--accent) !important; color: #0c0c0f !important;
+      font-family: 'Syne', sans-serif !important; font-weight: 700 !important;
+      font-size: 13px !important; padding: 8px 18px; border-radius: 8px;
     }
     .nav-cta:hover { background: #f0ff6e !important; }
 
-    /* ── HERO ── */
+    .nav-web-cta {
+      background: var(--bg3) !important; color: var(--text) !important;
+      border: 1px solid var(--border2) !important;
+      font-family: 'Syne', sans-serif !important; font-weight: 600 !important;
+      font-size: 13px !important; padding: 8px 18px; border-radius: 8px;
+    }
+    .nav-web-cta:hover { background: var(--bg4) !important; }
+
+    /* HERO */
     .hero {
-      position: relative;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 120px 24px 80px;
-      text-align: center;
-      overflow: hidden;
+      position: relative; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 120px 24px 80px; text-align: center; overflow: hidden;
     }
 
-    /* Radial glow behind hero */
     .hero::after {
-      content: '';
-      position: absolute;
-      top: 20%;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 800px;
-      height: 500px;
+      content: ''; position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 600px;
       background: radial-gradient(ellipse, rgba(232,255,71,0.07) 0%, transparent 70%);
       pointer-events: none;
     }
 
-    /* Grid lines bg */
     .hero-grid {
-      position: absolute;
-      inset: 0;
+      position: absolute; inset: 0;
       background-image:
         linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
@@ -151,369 +160,456 @@
       mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%);
     }
 
-    .hero-inner {
-      position: relative;
-      z-index: 1;
-      max-width: 760px;
-    }
+    .hero-inner { position: relative; z-index: 1; max-width: 840px; }
 
     .hero-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(232,255,71,0.08);
-      border: 1px solid rgba(232,255,71,0.2);
-      border-radius: 100px;
-      padding: 6px 14px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--accent);
-      letter-spacing: 0.3px;
-      margin-bottom: 32px;
-      animation: fadeUp 0.6s ease both;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(232,255,71,0.08); border: 1px solid rgba(232,255,71,0.2);
+      border-radius: 100px; padding: 6px 14px; font-size: 12px;
+      font-weight: 500; color: var(--accent); letter-spacing: 0.3px;
+      margin-bottom: 32px; animation: fadeUp 0.6s ease both;
     }
 
     .hero-badge-dot {
-      width: 6px; height: 6px;
-      border-radius: 50%;
-      background: var(--accent);
-      animation: pulse 2s ease-in-out infinite;
+      width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+      animation: blink 2s ease-in-out infinite;
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50%       { opacity: 0.5; transform: scale(0.8); }
+    @keyframes blink {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
     }
 
     h1 {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: clamp(42px, 7vw, 72px);
-      line-height: 1.05;
-      letter-spacing: -2px;
-      color: var(--text);
-      margin-bottom: 24px;
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(40px, 7vw, 76px); line-height: 1.03;
+      letter-spacing: -2.5px; color: var(--text); margin-bottom: 24px;
       animation: fadeUp 0.6s ease 0.1s both;
     }
-
-    h1 em {
-      font-style: normal;
-      color: var(--accent);
-    }
+    h1 em { font-style: normal; color: var(--accent); }
 
     .hero-sub {
-      font-size: 18px;
-      font-weight: 300;
-      color: var(--text2);
-      max-width: 520px;
-      margin: 0 auto 48px;
-      line-height: 1.65;
+      font-size: 18px; font-weight: 300; color: var(--text2);
+      max-width: 580px; margin: 0 auto 48px; line-height: 1.65;
       animation: fadeUp 0.6s ease 0.2s both;
     }
 
-    .hero-actions {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      flex-wrap: wrap;
+    .hero-cta-stack {
+      display: flex; flex-direction: column; align-items: center; gap: 16px;
       animation: fadeUp 0.6s ease 0.3s both;
     }
 
+    .cta-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
     .btn-primary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: var(--accent);
-      color: #0c0c0f;
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 15px;
-      padding: 14px 28px;
-      border-radius: 10px;
-      text-decoration: none;
-      transition: background 0.15s, transform 0.15s;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #0c0c0f;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 15px;
+      padding: 14px 28px; border-radius: 10px; text-decoration: none;
+      transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
     }
-    .btn-primary:hover { background: #f0ff6e; transform: translateY(-1px); }
+    .btn-primary:hover {
+      background: #f0ff6e; transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(232,255,71,0.25);
+    }
 
     .btn-secondary {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: transparent;
-      color: var(--text2);
-      font-family: 'DM Sans', sans-serif;
-      font-weight: 500;
-      font-size: 15px;
-      padding: 14px 24px;
-      border-radius: 10px;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--bg3); color: var(--text);
       border: 1px solid var(--border2);
-      text-decoration: none;
-      transition: border-color 0.15s, color 0.15s;
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 15px;
+      padding: 14px 24px; border-radius: 10px; text-decoration: none;
+      transition: all 0.15s;
     }
-    .btn-secondary:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
+    .btn-secondary:hover { background: var(--bg4); border-color: rgba(255,255,255,0.2); transform: translateY(-1px); }
 
-    /* ── FEATURES ── */
+    .cta-divider { color: var(--muted); font-size: 13px; }
+
+    .hero-note {
+      font-size: 12px; color: var(--muted); display: flex; align-items: center;
+      gap: 16px; justify-content: center; flex-wrap: wrap;
+    }
+    .hero-note span { display: flex; align-items: center; gap: 5px; }
+    .hero-note span::before { content: '✓'; color: var(--accent); font-weight: 700; }
+
+    /* PRIVACY HERO BANNER */
+    .privacy-hero-band {
+      position: relative; z-index: 1;
+      background: rgba(74,222,128,0.04);
+      border-top: 1px solid rgba(74,222,128,0.12);
+      border-bottom: 1px solid rgba(74,222,128,0.12);
+      padding: 14px 32px;
+      display: flex; align-items: center; justify-content: center; gap: 32px; flex-wrap: wrap;
+    }
+    .phb-item {
+      display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2);
+    }
+    .phb-item strong { color: var(--green); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; }
+
+    /* TOOL STRIP */
+    .tool-strip {
+      position: relative; z-index: 1;
+      background: var(--bg2); border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 0; overflow: hidden;
+    }
+
+    .tool-strip-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(6, 1fr);
+    }
+
+    .tool-strip-item {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 8px; padding: 24px 16px; cursor: pointer;
+      border-right: 1px solid var(--border); text-decoration: none;
+      color: var(--text2); transition: all 0.2s;
+    }
+    .tool-strip-item:last-child { border-right: none; }
+    .tool-strip-item:hover { background: rgba(232,255,71,0.05); color: var(--text); }
+    .tool-strip-item:hover .tool-strip-icon { background: rgba(232,255,71,0.15); }
+
+    .tool-strip-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: var(--bg3); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; transition: background 0.2s;
+    }
+
+    .tool-strip-label {
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 12px;
+      color: inherit; text-align: center; line-height: 1.3;
+    }
+
+    .tool-strip-sub { font-size: 10px; color: var(--muted); text-align: center; }
+
+    /* SECTION COMMON */
     .section {
-      position: relative;
-      z-index: 1;
-      padding: 100px 24px;
-      max-width: 1100px;
-      margin: 0 auto;
+      position: relative; z-index: 1; padding: 96px 48px;
+      max-width: 1100px; margin: 0 auto;
     }
 
     .section-label {
-      font-family: 'Syne', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 16px;
-    }
-
-    .section-title {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: clamp(28px, 4vw, 44px);
-      letter-spacing: -1px;
-      line-height: 1.1;
-      color: var(--text);
-      margin-bottom: 16px;
-    }
-
-    .section-sub {
-      color: var(--text2);
-      font-size: 17px;
-      font-weight: 300;
-      max-width: 500px;
-      line-height: 1.6;
-      margin-bottom: 64px;
-    }
-
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 2px;
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      overflow: hidden;
-    }
-
-    .feature-card {
-      background: var(--bg2);
-      padding: 32px;
-      transition: background 0.2s;
-      position: relative;
-    }
-    .feature-card:hover { background: var(--bg3); }
-
-    .feature-icon {
-      width: 40px; height: 40px;
-      border-radius: 10px;
-      background: rgba(232,255,71,0.1);
-      border: 1px solid rgba(232,255,71,0.2);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 600; letter-spacing: 2.5px;
+      text-transform: uppercase; color: var(--accent);
       margin-bottom: 20px;
     }
 
+    .section-title {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(28px, 4vw, 46px); letter-spacing: -1px;
+      color: var(--text); margin-bottom: 16px; line-height: 1.1;
+    }
+
+    .section-sub {
+      font-size: 17px; color: var(--text2); max-width: 560px;
+      font-weight: 300; line-height: 1.6; margin-bottom: 56px;
+    }
+
+    /* PRIVACY SECTION */
+    .privacy-section {
+      position: relative; z-index: 1;
+      background: rgba(74,222,128,0.03);
+      border-top: 1px solid rgba(74,222,128,0.1);
+      border-bottom: 1px solid rgba(74,222,128,0.1);
+      padding: 80px 48px;
+    }
+    .privacy-section-inner { max-width: 1100px; margin: 0 auto; }
+    .privacy-section h2 {
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: clamp(26px, 4vw, 40px); letter-spacing: -1px;
+      margin-bottom: 12px; color: var(--text);
+    }
+    .privacy-section h2 em { font-style: normal; color: var(--green); }
+    .privacy-section .sec-sub {
+      font-size: 16px; color: var(--text2); max-width: 600px; line-height: 1.7; margin-bottom: 48px;
+    }
+    .privacy-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px;
+    }
+    .privacy-card {
+      background: var(--bg2); border: 1px solid rgba(74,222,128,0.1);
+      border-radius: 16px; padding: 22px 18px;
+    }
+    .privacy-card-icon { font-size: 22px; margin-bottom: 10px; }
+    .privacy-card h4 {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
+      color: var(--text); margin-bottom: 6px;
+    }
+    .privacy-card p { font-size: 12.5px; color: var(--text2); line-height: 1.55; }
+    .privacy-devtools {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px 28px; max-width: 600px;
+    }
+    .privacy-devtools h4 {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px;
+      color: var(--text); margin-bottom: 12px;
+    }
+    .dt-row {
+      display: flex; gap: 10px; align-items: center;
+      padding: 7px 12px; border-radius: 8px; font-size: 12.5px;
+      color: var(--text2); margin-bottom: 6px;
+    }
+    .dt-row.ok { background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.15); }
+    .dt-row.no { background: rgba(255,80,80,0.06); border: 1px solid rgba(255,80,80,0.1); }
+    .dt-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dt-dot.g { background: var(--green); }
+    .dt-dot.r { background: #ff5050; }
+    .privacy-gdpr {
+      display: inline-block; background: rgba(74,222,128,0.06);
+      border: 1px solid rgba(74,222,128,0.15); border-radius: 12px;
+      padding: 14px 24px; font-size: 13px; color: var(--text2); line-height: 1.65;
+      margin-top: 24px;
+    }
+    .privacy-gdpr strong { color: var(--green); }
+
+    /* FEATURES GRID */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px;
+      border: 1px solid var(--border); border-radius: 16px; overflow: hidden;
+    }
+
+    .feature-card {
+      background: var(--bg2); padding: 32px 28px;
+      border: none; border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border); transition: background 0.2s;
+    }
+    .feature-card:hover { background: var(--bg3); }
+    .feature-card:nth-child(3), .feature-card:nth-child(6) { border-right: none; }
+    .feature-card:nth-child(4), .feature-card:nth-child(5), .feature-card:nth-child(6) { border-bottom: none; }
+
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 12px;
+      background: var(--bg3); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 18px;
+    }
+
     .feature-title {
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 17px;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px;
+      color: var(--text); margin-bottom: 8px;
+    }
+
+    .feature-desc { font-size: 14px; color: var(--text2); line-height: 1.6; margin-bottom: 10px; }
+
+    .feature-bullets { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+    .feature-bullet {
+      display: flex; align-items: flex-start; gap: 7px;
+      font-size: 12.5px; color: var(--text2); line-height: 1.45;
+    }
+    .feature-bullet-dot {
+      width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+      display: flex; align-items: center; justify-content: center; font-size: 9px;
+    }
+    .fbd-free { background: rgba(74,222,128,0.15); color: var(--green); }
+    .fbd-paid { background: rgba(232,255,71,0.15); color: var(--accent); }
+
+    .feature-tag {
+      display: inline-flex; margin-top: 12px; padding: 3px 8px;
+      border-radius: 6px; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.8px; text-transform: uppercase;
+    }
+    .feature-tag.free { background: rgba(46,213,115,0.12); color: #2ed573; }
+    .feature-tag.paid { background: rgba(232,255,71,0.1); color: var(--accent); }
+
+    /* HOW IT WORKS */
+    .how-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+      margin-top: 48px;
+    }
+
+    .how-step {
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    .how-num {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(232,255,71,0.1); border: 1px solid rgba(232,255,71,0.25);
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 16px;
+      color: var(--accent);
+    }
+
+    .how-title {
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 18px;
       color: var(--text);
-      margin-bottom: 8px;
     }
 
-    .feature-desc {
-      color: var(--text2);
-      font-size: 14px;
-      line-height: 1.6;
+    .how-desc { font-size: 14px; color: var(--text2); line-height: 1.65; }
+
+    /* PRICING */
+    .pricing-wrap {
+      position: relative; z-index: 1;
+      background: var(--bg2); border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
     }
 
-    /* ── PRICING ── */
     .pricing-section {
-      position: relative;
-      z-index: 1;
-      padding: 100px 24px;
-      max-width: 900px;
-      margin: 0 auto;
-      text-align: center;
+      max-width: 1100px; margin: 0 auto; padding: 96px 48px;
     }
 
     .pricing-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-      margin-top: 56px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 48px;
     }
 
     .pricing-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 32px 28px;
-      text-align: left;
-      position: relative;
-      transition: border-color 0.2s;
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 16px; padding: 32px 28px; position: relative;
+      transition: border-color 0.2s, transform 0.2s;
     }
-    .pricing-card:hover { border-color: var(--border2); }
+    .pricing-card:hover { border-color: var(--border2); transform: translateY(-3px); }
     .pricing-card.featured {
-      border-color: rgba(232,255,71,0.35);
-      background: rgba(232,255,71,0.04);
+      border-color: rgba(232,255,71,0.4);
+      box-shadow: 0 0 60px rgba(232,255,71,0.07);
+      background: rgba(232,255,71,0.03);
     }
 
     .pricing-badge {
-      position: absolute;
-      top: -12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--accent);
-      color: #0c0c0f;
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 10px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      padding: 4px 14px;
-      border-radius: 100px;
-      white-space: nowrap;
+      position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+      background: var(--accent); color: #0c0c0f;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 10px;
+      padding: 3px 12px; border-radius: 20px; letter-spacing: 0.5px;
+      white-space: nowrap; text-transform: uppercase;
     }
 
     .pricing-sessions {
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
-      font-size: 15px;
-      color: var(--text2);
-      margin-bottom: 8px;
+      font-size: 13px; color: var(--text2); margin-bottom: 10px;
     }
 
     .pricing-price {
-      font-family: 'Syne', sans-serif;
-      font-weight: 800;
-      font-size: 40px;
-      color: var(--text);
-      letter-spacing: -1px;
-      line-height: 1;
+      font-family: 'Syne', sans-serif; font-weight: 800;
+      font-size: 40px; color: var(--text); letter-spacing: -1px;
       margin-bottom: 4px;
     }
 
-    .pricing-unit {
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 24px;
-    }
+    .pricing-unit { font-size: 12px; color: var(--muted); margin-bottom: 28px; }
 
     .pricing-feature {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 13px;
-      color: var(--text2);
-      margin-bottom: 10px;
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 13px; color: var(--text2); margin-bottom: 10px;
     }
 
     .pricing-check {
-      width: 18px; height: 18px;
-      border-radius: 50%;
-      background: rgba(232,255,71,0.12);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 10px;
-      color: var(--accent);
-      flex-shrink: 0;
+      color: var(--accent); font-weight: 700; flex-shrink: 0; margin-top: 1px;
     }
+
+    .pricing-cta {
+      display: block; width: 100%; margin-top: 24px;
+      padding: 11px 0; border-radius: 9px; text-align: center;
+      font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
+      text-decoration: none; cursor: pointer; border: none;
+      transition: all 0.2s;
+    }
+    .pricing-cta.primary {
+      background: var(--accent); color: #0c0c0f;
+    }
+    .pricing-cta.primary:hover { background: #f0ff6e; }
+    .pricing-cta.secondary {
+      background: var(--bg3); color: var(--text);
+      border: 1px solid var(--border2);
+    }
+    .pricing-cta.secondary:hover { background: var(--bg4); }
 
     .pricing-free {
-      margin-top: 48px;
-      padding: 20px 28px;
-      background: rgba(232,255,71,0.05);
-      border: 1px solid rgba(232,255,71,0.15);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      font-size: 14px;
-      color: var(--text2);
+      text-align: center; margin-top: 32px;
+      font-size: 14px; color: var(--text2);
+    }
+    .pricing-free strong { color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 700; }
+
+    /* FAQ */
+    .faq-list { margin-top: 48px; display: flex; flex-direction: column; gap: 2px; }
+
+    .faq-item {
+      border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; margin-bottom: 6px;
     }
 
-    .pricing-free strong {
-      color: var(--accent);
-      font-family: 'Syne', sans-serif;
-      font-weight: 700;
+    .faq-q {
+      padding: 20px 24px; cursor: pointer;
+      font-family: 'Syne', sans-serif; font-weight: 600; font-size: 15px;
+      color: var(--text); display: flex; justify-content: space-between;
+      align-items: center; user-select: none; transition: background 0.15s;
+    }
+    .faq-q:hover { background: var(--bg3); }
+
+    .faq-icon { font-size: 18px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+    .faq-item.open .faq-icon { transform: rotate(45deg); color: var(--accent); }
+
+    .faq-a {
+      max-height: 0; overflow: hidden;
+      transition: max-height 0.3s ease, padding 0.3s ease;
+      font-size: 14px; color: var(--text2); line-height: 1.7;
+      padding: 0 24px;
+    }
+    .faq-item.open .faq-a { max-height: 300px; padding: 0 24px 20px; }
+
+    /* TRUST BAR */
+    .trust-bar {
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border); padding: 32px 48px;
+      display: flex; align-items: center; justify-content: center; gap: 48px;
+      flex-wrap: wrap; max-width: 1100px; margin: 0 auto;
     }
 
-    /* ── FOOTER ── */
+    .trust-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--text2);
+    }
+    .trust-icon { font-size: 20px; }
+    .trust-label strong { color: var(--text); font-family: 'Syne', sans-serif; font-weight: 600; }
+
+    /* FOOTER */
     footer {
-      position: relative;
-      z-index: 1;
-      border-top: 1px solid var(--border);
+      position: relative; z-index: 1; border-top: 1px solid var(--border);
       padding: 48px 48px 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 24px; max-width: 1100px; margin: 0 auto;
     }
 
-    .footer-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
-    }
+    .footer-copy { font-size: 13px; color: var(--muted); margin-top: 8px; }
 
-    .footer-copy {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-    }
-
-    .footer-links a {
-      color: var(--muted);
-      text-decoration: none;
-      font-size: 13px;
-      transition: color 0.15s;
-    }
+    .footer-links { display: flex; gap: 24px; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color 0.15s; }
     .footer-links a:hover { color: var(--text2); }
 
-    /* ── SEPARATOR ── */
-    .sep {
-      width: 100%;
-      height: 1px;
-      background: var(--border);
-      max-width: 1100px;
-      margin: 0 auto;
-    }
+    .footer-border { border-top: 1px solid var(--border); }
 
-    /* ── ANIMATIONS ── */
+    /* ANIMATIONS */
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
 
     .reveal {
-      opacity: 0;
-      transform: translateY(24px);
+      opacity: 0; transform: translateY(24px);
       transition: opacity 0.6s ease, transform 0.6s ease;
     }
-    .reveal.visible {
-      opacity: 1;
-      transform: none;
+    .reveal.visible { opacity: 1; transform: none; }
+
+    /* RESPONSIVE */
+    @media (max-width: 900px) {
+      .features-grid { grid-template-columns: repeat(2, 1fr); }
+      .features-grid .feature-card:nth-child(3) { border-right: 1px solid var(--border); }
+      .features-grid .feature-card:nth-child(2), .features-grid .feature-card:nth-child(4) { border-right: none; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 440px; margin-left: auto; margin-right: auto; }
+      .how-grid { grid-template-columns: 1fr; gap: 24px; }
+      .tool-strip-inner { grid-template-columns: repeat(3, 1fr); }
+      .privacy-grid { grid-template-columns: repeat(2, 1fr); }
     }
 
-    /* ── RESPONSIVE ── */
     @media (max-width: 640px) {
       nav { padding: 0 20px; }
       .nav-links { display: none; }
+      .section { padding: 64px 20px; }
+      .pricing-section { padding: 64px 20px; }
       footer { flex-direction: column; align-items: flex-start; padding: 32px 20px; }
-      .hero-actions { flex-direction: column; align-items: stretch; }
-      .btn-primary, .btn-secondary { justify-content: center; }
+      .trust-bar { padding: 24px 20px; gap: 24px; }
+      .tool-strip-inner { grid-template-columns: repeat(2, 1fr); }
+      .features-grid { grid-template-columns: 1fr; border-radius: 12px; }
+      .features-grid .feature-card { border-right: none !important; }
+      .privacy-section { padding: 64px 20px; }
+      .privacy-grid { grid-template-columns: 1fr 1fr; }
+      .privacy-hero-band { padding: 14px 20px; gap: 14px; }
     }
   </style>
 </head>
@@ -523,14 +619,16 @@
   <nav>
     <a href="/" class="nav-logo">
       <div class="nav-logo-mark">F</div>
-      <span class="nav-logo-text">Folio PDF Studio</span>
+      <span class="nav-logo-text">ForgePDF</span>
     </a>
     <ul class="nav-links">
       <li><a href="#features">Features</a></li>
+      <li><a href="#privacy">Privacy</a></li>
       <li><a href="#pricing">Pricing</a></li>
-      <li><a href="/privacy.html">Privacy</a></li>
+      <li><a href="/privacy.html">Privacy Policy</a></li>
       <li><a href="/terms.html">Terms</a></li>
-      <li><a href="https://chromewebstore.google.com" class="nav-cta">Add to Chrome</a></li>
+      <li><a href="web-editor.html" class="nav-web-cta">Open Editor</a></li>
+      <li><a href="https://chromewebstore.google.com/detail/dmehdbeijmkcnkfgmiiippmnlncggpon?utm_source=item-share-cb" class="nav-cta">Add to Chrome</a></li>
     </ul>
   </nav>
 
@@ -540,145 +638,390 @@
     <div class="hero-inner">
       <div class="hero-badge">
         <div class="hero-badge-dot"></div>
-        Chrome Extension — Free to try
+        Free to try — No account required
       </div>
-      <h1>Edit PDFs with<br><em>elegance</em></h1>
+
+      <h1>Edit PDFs without<br>giving them <em>to anyone</em></h1>
+
       <p class="hero-sub">
-        Text editing, e-signatures, conversion, merging and more —
-        directly in your browser. No upload, no account, no subscription.
+        Edit text line by line, fill forms, sign, merge, extract and convert PDFs —
+        entirely inside your browser. Zero upload. Zero server. Zero tracking.
       </p>
-      <div class="hero-actions">
-        <a href="https://chromewebstore.google.com" class="btn-primary">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-          Add to Chrome — Free
-        </a>
-        <a href="#features" class="btn-secondary">
-          See all features →
-        </a>
+
+      <div class="hero-cta-stack">
+        <div class="cta-row">
+          <a href="web-editor.html" class="btn-primary">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 12.5L5 11l7-7-2-2-7 7-1 3z" stroke="#0c0c0f" stroke-width="1.5" stroke-linejoin="round"/><path d="M11 3l2 2" stroke="#0c0c0f" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Open Editor — Free
+          </a>
+          <span class="cta-divider">or</span>
+          <a href="https://chromewebstore.google.com/detail/dmehdbeijmkcnkfgmiiippmnlncggpon?utm_source=item-share-cb" class="btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+            Chrome Extension
+          </a>
+        </div>
+        <div class="hero-note">
+          <span>Files never leave your device</span>
+          <span>No account needed</span>
+          <span>First edit free</span>
+          <span>No server processing</span>
+        </div>
       </div>
     </div>
   </section>
+
+  <!-- PRIVACY BANNER -->
+  <div class="privacy-hero-band">
+    <div class="phb-item">🔒 <span><strong>Zero upload</strong> — your files stay on your machine</span></div>
+    <div class="phb-item">🚫 <span><strong>No server processing</strong> — nothing is ever transmitted</span></div>
+    <div class="phb-item">✈️ <span><strong>Works offline</strong> — no internet required after load</span></div>
+    <div class="phb-item">🇪🇺 <span><strong>GDPR by architecture</strong> — not by policy</span></div>
+    <div class="phb-item">🔍 <span><strong>Auditable</strong> — open DevTools and verify yourself</span></div>
+  </div>
+
+  <!-- TOOL STRIP -->
+  <div class="tool-strip">
+    <div class="tool-strip-inner">
+      <a href="web-editor.html?mode=edit" class="tool-strip-item">
+        <div class="tool-strip-icon">✏️</div>
+        <div class="tool-strip-label">Edit Text</div>
+        <div class="tool-strip-sub">Line by line</div>
+      </a>
+      <a href="web-editor.html?mode=sign" class="tool-strip-item">
+        <div class="tool-strip-icon">✍️</div>
+        <div class="tool-strip-label">Sign PDF</div>
+        <div class="tool-strip-sub">Free forever</div>
+      </a>
+      <a href="web-editor.html?mode=merge" class="tool-strip-item">
+        <div class="tool-strip-icon">🗂️</div>
+        <div class="tool-strip-label">Merge PDFs</div>
+        <div class="tool-strip-sub">Combine files</div>
+      </a>
+      <a href="web-editor.html?mode=extract" class="tool-strip-item">
+        <div class="tool-strip-icon">✂️</div>
+        <div class="tool-strip-label">Extract Pages</div>
+        <div class="tool-strip-sub">Split & export</div>
+      </a>
+      <a href="web-editor.html?mode=annotate" class="tool-strip-item">
+        <div class="tool-strip-icon">🖍️</div>
+        <div class="tool-strip-label">Annotate</div>
+        <div class="tool-strip-sub">Highlight & draw</div>
+      </a>
+      <a href="web-editor.html?mode=convert" class="tool-strip-item">
+        <div class="tool-strip-icon">⚡</div>
+        <div class="tool-strip-label">Convert PDF</div>
+        <div class="tool-strip-sub">JPG, DOCX, TXT…</div>
+      </a>
+    </div>
+  </div>
 
   <!-- FEATURES -->
   <section class="section" id="features">
     <div class="reveal">
-      <div class="section-label">Features</div>
+      <div class="section-label">✦ Features</div>
       <h2 class="section-title">Everything your PDF needs</h2>
-      <p class="section-sub">A complete PDF toolkit inside a sleek Chrome extension. No external server handles your documents.</p>
+      <p class="section-sub">A complete PDF toolkit running entirely in your browser. Every operation — editing, signing, converting — happens locally. Your documents are never transmitted anywhere.</p>
     </div>
     <div class="features-grid reveal">
       <div class="feature-card">
         <div class="feature-icon">✏️</div>
-        <div class="feature-title">Text Editing</div>
-        <div class="feature-desc">Detect and modify existing text blocks. Preserve original fonts, sizes and positions. Apply your own styling.</div>
+        <div class="feature-title">Line-by-line Text Editing</div>
+        <div class="feature-desc">Click any text block in your PDF to edit it directly. Original font, size, colour and position are preserved automatically — a pixel-perfect whiteout is applied underneath.</div>
+        <div class="feature-bullets">
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-paid">✦</div><span>Detect and click any text line to open inline editor</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-paid">✦</div><span>Customise font, size, colour, bold, italic, rotation</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-paid">✦</div><span>Free text placement — add blocks anywhere on any page</span></div>
+        </div>
+        <span class="feature-tag paid">From €0.50</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <div class="feature-title">Smart Form Filling</div>
+        <div class="feature-desc">Automatically detects interactive form fields (AcroForms) in your PDF. Click and type directly into each field. For PDFs without fields, use free placement to add text anywhere.</div>
+        <div class="feature-bullets">
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-paid">✦</div><span>Auto-detection of AcroForm fields — click and fill instantly</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-paid">✦</div><span>Drag, resize and style each text block independently</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-paid">✦</div><span>Data embedded permanently in the exported PDF</span></div>
+        </div>
+        <span class="feature-tag paid">From €0.50</span>
       </div>
       <div class="feature-card">
         <div class="feature-icon">✍️</div>
         <div class="feature-title">E-Signatures</div>
-        <div class="feature-desc">Draw your signature, type it in cursive, or upload an image. Place and resize anywhere on the page.</div>
+        <div class="feature-desc">Create your signature three ways: draw on the pad with mouse or stylus, type it in a handwritten font, or upload an image. Place multiple signatures anywhere on any page.</div>
+        <div class="feature-bullets">
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Draw, type or upload — three signature methods</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Freely reposition and resize after placing</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Multiple signatures on any page</span></div>
+        </div>
+        <span class="feature-tag free">Always free</span>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🔀</div>
         <div class="feature-title">Merge PDFs</div>
-        <div class="feature-desc">Combine multiple PDF files into one. Drag to reorder, include your current edits in the final document.</div>
+        <div class="feature-desc">Combine multiple PDF files into one document. Drag to reorder pages with thumbnail previews. Current edits, annotations and signatures are automatically included in the output.</div>
+        <div class="feature-bullets">
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Add unlimited files — no cap on number of PDFs</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Drag-to-reorder with visual thumbnail preview</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>All edits and annotations preserved in result</span></div>
+        </div>
+        <span class="feature-tag free">Always free</span>
       </div>
       <div class="feature-card">
         <div class="feature-icon">✂️</div>
-        <div class="feature-title">Extract Pages</div>
-        <div class="feature-desc">Select specific pages and export them as a standalone PDF. Thumbnail preview for easy selection.</div>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🖍️</div>
-        <div class="feature-title">Annotations</div>
-        <div class="feature-desc">Draw highlight rectangles in any colour and opacity. Non-destructive annotations baked into the final PDF.</div>
+        <div class="feature-title">Extract & Split Pages</div>
+        <div class="feature-desc">Select specific pages using thumbnail previews and export them as a standalone PDF. Perfect for pulling out a single clause, invoice or section from a large document.</div>
+        <div class="feature-bullets">
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Visual thumbnail selection — pick any subset of pages</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Exported as a new standalone PDF instantly</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Works on scanned and digital PDFs</span></div>
+        </div>
+        <span class="feature-tag free">Always free</span>
       </div>
       <div class="feature-card">
         <div class="feature-icon">⚡</div>
-        <div class="feature-title">Convert</div>
-        <div class="feature-desc">Export pages as JPG, PNG, DOCX, TXT, HTML or CSV. Batch export all pages in one click.</div>
+        <div class="feature-title">Convert to Any Format</div>
+        <div class="feature-desc">Export PDF pages as JPG, PNG, DOCX (Word), TXT, HTML or CSV. Batch-export all pages in one click. Everything is rendered locally — no online converter, no upload.</div>
+        <div class="feature-bullets">
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>JPG, PNG, DOCX, TXT, HTML, CSV supported</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Batch export all pages at once</span></div>
+          <div class="feature-bullet"><div class="feature-bullet-dot fbd-free">✓</div><span>Optional page range selection</span></div>
+        </div>
+        <span class="feature-tag free">Always free</span>
       </div>
     </div>
   </section>
 
-  <div class="sep"></div>
+  <!-- PRIVACY SECTION -->
+  <div class="privacy-section" id="privacy">
+    <div class="privacy-section-inner reveal">
+      <div class="section-label" style="color: var(--green);">🔒 Privacy & Security</div>
+      <h2 class="section-title" style="color: var(--text);">Your files never leave <em style="color:var(--green)">your device</em></h2>
+      <p class="sec-sub" style="font-size:16px;color:var(--text2);max-width:640px;line-height:1.7;margin-bottom:48px;">
+        Unlike most PDF tools that upload your files to a remote server, ForgePDF processes everything locally using open-source WebAssembly libraries (PDF.js, pdf-lib) running directly in your browser tab.
+        There is no upload pipeline. It is <strong style="color:var(--text)">architecturally impossible</strong> for us to access your documents.
+        GDPR compliance is a structural consequence — not a policy checkbox. <strong style="color:var(--text)">You can verify this yourself in seconds.</strong>
+      </p>
+      <div class="privacy-grid">
+        <div class="privacy-card">
+          <div class="privacy-card-icon">🧠</div>
+          <h4>Local-only processing</h4>
+          <p>PDF parsing, rendering, editing, merging and conversion all run inside your browser tab. File bytes never reach our servers — not partially, not temporarily.</p>
+        </div>
+        <div class="privacy-card">
+          <div class="privacy-card-icon">🪪</div>
+          <h4>Anonymous ID only</h4>
+          <p>The only data we store is an anonymous browser ID for credit tracking. No name, no email, no file name, no IP stored, no document content — ever.</p>
+        </div>
+        <div class="privacy-card">
+          <div class="privacy-card-icon">✈️</div>
+          <h4>Works offline</h4>
+          <p>Signing, merging, extracting and converting all work with zero internet connection once loaded. No cloud dependency whatsoever for these operations.</p>
+        </div>
+        <div class="privacy-card">
+          <div class="privacy-card-icon">🔍</div>
+          <h4>Fully auditable</h4>
+          <p>Open DevTools → Network while editing: you will see zero file upload requests. The source libraries (PDF.js, pdf-lib) are open source and inspectable.</p>
+        </div>
+      </div>
+      <div class="privacy-devtools">
+        <h4>🔬 Verify it yourself — open DevTools → Network tab</h4>
+        <div class="dt-row ok"><div class="dt-dot g"></div><span><strong style="color:var(--text)">credit-check</strong> — anonymous ID only · ~200 bytes · ✓ expected</span></div>
+        <div class="dt-row no"><div class="dt-dot r"></div><span>file upload · document content · PDF bytes → <strong style="color:#ff8080">0 requests found</strong></span></div>
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">That's it. One lightweight credit check call. Your PDF never moves.</p>
+      </div>
+      <div class="privacy-gdpr" style="display:block;margin-top:24px;max-width:640px">
+        <strong>GDPR compliance by architecture:</strong> because we never receive your file, there is nothing to delete, anonymise, protect or breach. Your documents exist only on your device — we have no access to them, not now, not ever.
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div style="background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+    <section class="section">
+      <div class="reveal">
+        <div class="section-label">How it works</div>
+        <h2 class="section-title">Three steps to a perfect PDF</h2>
+      </div>
+      <div class="how-grid reveal">
+        <div class="how-step">
+          <div class="how-num">1</div>
+          <div class="how-title">Drop your PDF</div>
+          <div class="how-desc">Drag and drop your file into the editor — or open it directly from a URL. Your document is decoded and rendered locally in your browser tab. Nothing is sent anywhere.</div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">2</div>
+          <div class="how-title">Edit, sign or convert</div>
+          <div class="how-desc">Click any text block to edit it line by line. Draw your signature, fill form fields, merge other PDFs, extract pages or convert to another format — all in the same session.</div>
+        </div>
+        <div class="how-step">
+          <div class="how-num">3</div>
+          <div class="how-title">Download instantly</div>
+          <div class="how-desc">Export your finished PDF with one click. The file is generated locally and downloads directly to your device. Nothing is stored on any server at any point.</div>
+        </div>
+      </div>
+    </section>
+  </div>
 
   <!-- PRICING -->
-  <section class="pricing-section" id="pricing">
+  <div class="pricing-wrap" id="pricing">
+    <div class="pricing-section">
+      <div class="reveal" style="text-align: center;">
+        <div class="section-label" style="justify-content: center;">Pricing</div>
+        <h2 class="section-title">Pay only for what you edit</h2>
+        <p class="section-sub" style="margin: 0 auto; text-align: center; max-width: 520px;">
+          Signing, merging, annotating and converting are always free — forever.
+          Text editing and form filling use a simple credit system — no subscription, no auto-renewal, ever.
+        </p>
+      </div>
+
+      <div class="pricing-grid reveal">
+        <div class="pricing-card">
+          <div class="pricing-sessions">1 editing session</div>
+          <div class="pricing-price">€0.50</div>
+          <div class="pricing-unit">one-time · never expires</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>1 full text-editing session</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>Form filling included</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>Unlimited pages per session</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>Full PDF export included</div>
+          <a href="web-editor.html" class="pricing-cta secondary">Start editing →</a>
+        </div>
+
+        <div class="pricing-card featured">
+          <div class="pricing-badge">Best value</div>
+          <div class="pricing-sessions">5 editing sessions</div>
+          <div class="pricing-price">€1</div>
+          <div class="pricing-unit">€0.20 per session · save 60%</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>5 full editing sessions</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>Form filling included</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>Credits never expire</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>Full PDF export included</div>
+          <a href="web-editor.html" class="pricing-cta primary">Get started →</a>
+        </div>
+
+        <div class="pricing-card">
+          <div class="pricing-sessions">20 editing sessions</div>
+          <div class="pricing-price">€3</div>
+          <div class="pricing-unit">€0.15 per session · save 70%</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>20 full editing sessions</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>Form filling included</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>Credits never expire</div>
+          <div class="pricing-feature"><div class="pricing-check">✓</div>Full PDF export included</div>
+          <a href="web-editor.html" class="pricing-cta secondary">Start editing →</a>
+        </div>
+      </div>
+
+      <div class="pricing-free reveal">
+        <strong>✨ First session always free</strong>
+        &nbsp;— try text editing and form filling once, no payment required.
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ -->
+  <section class="section">
     <div class="reveal">
-      <div class="section-label">Pricing</div>
-      <h2 class="section-title">Pay only for what you edit</h2>
-      <p class="section-sub" style="margin: 0 auto 0; text-align: center;">Conversion, signing, merging and extraction are always free. You only pay to edit text.</p>
+      <div class="section-label">FAQ</div>
+      <h2 class="section-title">Questions & answers</h2>
     </div>
-
-    <div class="pricing-grid reveal">
-
-      <div class="pricing-card">
-        <div class="pricing-sessions">1 session</div>
-        <div class="pricing-price">€0.49</div>
-        <div class="pricing-unit">one-time · no expiry</div>
-        <div class="pricing-feature"><div class="pricing-check">✓</div>1 text editing session</div>
-        <div class="pricing-feature"><div class="pricing-check">✓</div>Unlimited pages per session</div>
-        <div class="pricing-feature"><div class="pricing-check">✓</div>Full PDF export</div>
+    <div class="faq-list reveal">
+      <div class="faq-item">
+        <div class="faq-q">Are my PDF files ever sent to your servers? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Never. All PDF processing runs client-side using PDF.js and pdf-lib — open-source libraries running via WebAssembly in your browser tab. The only server call we make is a credit balance check containing only your anonymous browser ID — not your file, not its name, not any content. You can verify this instantly: open DevTools → Network → Fetch/XHR and filter while editing. You will find zero file upload requests.</div>
       </div>
-
-      <div class="pricing-card featured">
-        <div class="pricing-badge">Best value</div>
-        <div class="pricing-sessions">5 sessions</div>
-        <div class="pricing-price">€1.99</div>
-        <div class="pricing-unit">€0.40 per session · save 18%</div>
-        <div class="pricing-feature"><div class="pricing-check">✓</div>5 text editing sessions</div>
-        <div class="pricing-feature"><div class="pricing-check">✓</div>Credits never expire</div>
-        <div class="pricing-feature"><div class="pricing-check">✓</div>Full PDF export</div>
+      <div class="faq-item">
+        <div class="faq-q">What's the difference between line-by-line editing, form filling and free placement? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Line-by-line editing lets you click on any existing text block in the PDF to modify it — the original font, size and position are preserved. Form filling works on PDFs that already have interactive fields (AcroForms) — ForgePDF detects them automatically and you click directly into each field. Free placement lets you add a brand-new text block anywhere on any PDF, even one with no form fields at all — you drag it to exact position, resize it, and style it independently. All three modes are available in the same editor session.</div>
       </div>
-
-      <div class="pricing-card">
-        <div class="pricing-sessions">20 sessions</div>
-        <div class="pricing-price">€6.99</div>
-        <div class="pricing-unit">€0.35 per session · save 29%</div>
-        <div class="pricing-feature"><div class="pricing-check">✓</div>20 text editing sessions</div>
-        <div class="pricing-feature"><div class="pricing-check">✓</div>Credits never expire</div>
-        <div class="pricing-feature"><div class="pricing-check">✓</div>Full PDF export</div>
+      <div class="faq-item">
+        <div class="faq-q">Is ForgePDF really free to use? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Yes. Signing, merging, splitting, annotating and converting PDFs are completely free forever. Text editing and form filling use a credit system — your first session is completely free, and additional sessions start at €0.50. Credits never expire.</div>
       </div>
-
-    </div>
-
-    <div class="pricing-free reveal">
-      <strong>✨ First session free</strong>
-      &nbsp;— try text editing once, no payment required.
+      <div class="faq-item">
+        <div class="faq-q">Are my documents stored on your servers? <span class="faq-icon">+</span></div>
+        <div class="faq-a">No. All PDF processing happens locally in your browser using WebAssembly and JavaScript. Your files never leave your device. We only store your anonymous usage credit balance — nothing else. No file names, no document content, no metadata.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What's the difference between the web app and the Chrome extension? <span class="faq-icon">+</span></div>
+        <div class="faq-a">The web app works in any modern browser — just open the URL and start editing. The Chrome extension adds extra convenience: it detects PDFs as you browse, adds a quick-open button to PDF links, and integrates with your right-click menu. Both use identical local processing — your files never leave your device in either case.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Do my credits expire? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Never. Credits are tied to your browser's anonymous ID and never expire. Buy them once, use them whenever you need.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">What file formats can I export to? <span class="faq-icon">+</span></div>
+        <div class="faq-a">You can export your edited PDF as PDF (always), or convert pages to JPG, PNG, DOCX (Word), TXT, HTML, or CSV. Batch export all pages at once with a single click.</div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q">Can I edit scanned PDFs? <span class="faq-icon">+</span></div>
+        <div class="faq-a">Line-by-line text editing requires a real text layer — scanned image-only PDFs don't have one. However, signing, annotating, merging, extracting pages and converting to image formats all work perfectly on scanned PDFs.</div>
+      </div>
     </div>
   </section>
 
-  <div class="sep"></div>
+  <!-- TRUST BAR -->
+  <div style="border-top: 1px solid var(--border);">
+    <div class="trust-bar reveal">
+      <div class="trust-item">
+        <span class="trust-icon">🔒</span>
+        <div class="trust-label"><strong>100% private</strong><br>Files never uploaded</div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">⚡</span>
+        <div class="trust-label"><strong>Instant</strong><br>No install required</div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">💳</span>
+        <div class="trust-label"><strong>Stripe payments</strong><br>Secure checkout</div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">🌍</span>
+        <div class="trust-label"><strong>Works everywhere</strong><br>Any modern browser</div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-icon">🔍</span>
+        <div class="trust-label"><strong>Auditable</strong><br>Verify in DevTools</div>
+      </div>
+    </div>
+  </div>
 
   <!-- FOOTER -->
-  <footer>
-    <div>
-      <a href="/" class="footer-logo">
-        <div class="nav-logo-mark" style="width:26px;height:26px;font-size:13px;border-radius:6px;">F</div>
-        <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text2);margin-left:8px;">Folio PDF Studio</span>
-      </a>
-      <p class="footer-copy" style="margin-top:8px;">© 2025 Folio PDF Studio. All rights reserved.</p>
-    </div>
-    <div class="footer-links">
-      <a href="#features">Features</a>
-      <a href="#pricing">Pricing</a>
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/terms.html">Terms of Service</a>
-    </div>
-  </footer>
+  <div class="footer-border">
+    <footer>
+      <div>
+        <a href="/" class="nav-logo" style="text-decoration: none;">
+          <div class="nav-logo-mark" style="width: 26px; height: 26px; font-size: 13px; border-radius: 6px;">F</div>
+          <span style="font-family:'Syne',sans-serif; font-weight:700; font-size:14px; color:var(--text2); margin-left: 8px;">ForgePDF</span>
+        </a>
+        <p class="footer-copy" style="margin-top:8px;">© 2025 ForgePDF. All rights reserved.</p>
+      </div>
+      <div class="footer-links">
+        <a href="#features">Features</a>
+        <a href="#privacy">Privacy</a>
+        <a href="#pricing">Pricing</a>
+        <a href="web-editor.html">Web Editor</a>
+        <a href="chrome-extension.html">Chrome Extension</a>
+        <a href="/privacy.html">Privacy Policy</a>
+        <a href="/terms.html">Terms of Service</a>
+      </div>
+    </footer>
+  </div>
 
   <script>
-    // Scroll reveal
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(e => {
-        if (e.isIntersecting) {
-          e.target.classList.add('visible');
-          observer.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.12 });
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 
-    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    document.querySelectorAll('.faq-q').forEach(q => {
+      q.addEventListener('click', () => {
+        const item = q.parentElement;
+        const wasOpen = item.classList.contains('open');
+        document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+        if (!wasOpen) item.classList.add('open');
+      });
+    });
   </script>
 
 </body>
