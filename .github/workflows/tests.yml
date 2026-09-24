@@ -1,0 +1,30 @@
+name: Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - name: Exported PDFs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: tests/.output/
+          retention-days: 7

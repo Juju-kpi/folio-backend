@@ -1,0 +1,16 @@
+{
+  "name": "folio-tests",
+  "private": true,
+  "description": "Automated tests for the Folio web editor and API (not deployed)",
+  "scripts": {
+    "test": "node run-all.js",
+    "test:structure": "node run-all.js structure",
+    "test:api": "node suites/api.test.mjs",
+    "fixtures": "python3 generators/make_pdfs.py && python3 generators/make_tables.py && python3 generators/make_tables_extra.py && python3 generators/make_office.py && node generators/make_html.js"
+  },
+  "devDependencies": {
+    "pdf-lib": "1.17.1",
+    "playwright": "1.56.1",
+    "stripe": "^22.1.1"
+  }
+}
