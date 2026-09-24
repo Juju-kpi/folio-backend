@@ -1,64 +1,58 @@
 // api/status.js
 // GET /api/status?uid=USER_ID
-// Returns: { credits: number, free_used: number, freeRemaining: number }
+// Returns: { uid, credits, free_used, freeRemaining, lifetime_free }
+import {
+  FREE_SESSIONS, isValidUID, getUserRow, insertUser, registerNewUid,
+  normalizeCredits, normalizeFreeUsed, createRateLimiter, clientIp,
+} from '../lib/folio-api.js';
+
+// Anti-rafale (en mémoire) sur la création de nouveaux UID. La limite durable
+// (sessions gratuites par IP et par jour) est tenue en base : registerNewUid().
+const isCreationLimited = createRateLimiter(20, 10 * 60_000);
+const isReadLimited     = createRateLimiter(120, 60_000);
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  res.setHeader('Cache-Control', 'no-store');
 
-  const { uid } = req.query;
-  if (!uid || uid.length < 8) return res.status(400).json({ error: 'Missing uid' });
+  const uid = typeof req.query.uid === 'string' ? req.query.uid : '';
+  if (!isValidUID(uid)) return res.status(400).json({ error: 'Invalid uid' });
+
+  const ip = clientIp(req);
+  if (isReadLimited(ip)) return res.status(429).json({ error: 'rate_limited' });
 
   try {
-    const data = await getUser(uid);
-    return res.status(200).json(data);
+    const row = await getUserRow(uid);
+
+    if (!row) {
+      if (isCreationLimited(ip)) return res.status(429).json({ error: 'rate_limited' });
+      // Au-delà du quota de l'IP pour la journée (effacer les données du navigateur
+      // pour obtenir un nouvel UID), le nouvel UID n'a pas de session gratuite.
+      const allowFree = await registerNewUid(ip);
+      const freeUsed  = allowFree ? 0 : FREE_SESSIONS;
+      const created   = await insertUser({ uid, credits: 0, free_used: freeUsed });
+      if (!created) {
+        const existing = await getUserRow(uid);   // créé par une requête concurrente
+        if (existing) return res.status(200).json(format(existing));
+      }
+      return res.status(200).json(format({ uid, credits: 0, free_used: freeUsed, lifetime_free: false }));
+    }
+
+    return res.status(200).json(format(row));
   } catch (e) {
     console.error('[status]', e);
     return res.status(500).json({ error: 'Server error' });
   }
 }
 
-const FREE_SESSIONS = 4;  // ← doit rester identique à consume.js
-
-async function getUser(uid) {
-  const url = `${process.env.SUPABASE_URL}/rest/v1/users?uid=eq.${uid}&select=uid,credits,free_used`;
-  const r = await fetch(url, {
-    headers: {
-      'apikey':        process.env.SUPABASE_KEY,
-      'Authorization': `Bearer ${process.env.SUPABASE_KEY}`
-    }
-  });
-  if (!r.ok) throw new Error('Supabase error: ' + r.status);
-
-  const rows = await r.json();
-
-  if (rows.length === 0) {
-    await createUser(uid);
-    return { credits: 0, free_used: 0, freeRemaining: FREE_SESSIONS };
-  }
-
-  const row = rows[0];
-  // Compatibilité ascendante avec l'ancien champ boolean
-  const freeUsed = row.free_used === true ? 1
-                 : row.free_used === false ? 0
-                 : (row.free_used || 0);
-
+function format(row) {
+  const freeUsed = normalizeFreeUsed(row.free_used);
   return {
-    ...row,
+    uid:           row.uid,
+    credits:       normalizeCredits(row.credits),
     free_used:     freeUsed,
-    freeRemaining: Math.max(0, FREE_SESSIONS - freeUsed)
+    freeRemaining: Math.max(0, FREE_SESSIONS - freeUsed),
+    lifetime_free: row.lifetime_free === true,
   };
-}
-
-async function createUser(uid) {
-  const url = `${process.env.SUPABASE_URL}/rest/v1/users`;
-  await fetch(url, {
-    method: 'POST',
-    headers: {
-      'apikey':        process.env.SUPABASE_KEY,
-      'Authorization': `Bearer ${process.env.SUPABASE_KEY}`,
-      'Content-Type':  'application/json',
-      'Prefer':        'return=minimal'
-    },
-    body: JSON.stringify({ uid, credits: 0, free_used: 0 })  // 0 = aucune session utilisée
-  });
 }

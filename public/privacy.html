@@ -307,7 +307,7 @@
     <div class="doc-header">
       <div class="doc-tag">Legal</div>
       <h1 class="doc-title">Privacy Policy</h1>
-      <p class="doc-meta">Last updated: June 1, 2025 &nbsp;·&nbsp; Effective immediately</p>
+      <p class="doc-meta">Last updated: September 24, 2026 &nbsp;·&nbsp; Effective immediately</p>
     </div>
 
     <div class="toc">
@@ -342,7 +342,8 @@
       <ul>
         <li>An <strong>anonymous user ID</strong> generated randomly in your browser — this is not linked to your name, email, Google account or any personal identifier.</li>
         <li>A <strong>credit counter</strong> (how many editing sessions you have purchased and used).</li>
-        <li>A <strong>boolean flag</strong> indicating whether your one free trial session has been used.</li>
+        <li>A <strong>counter of free trial sessions</strong> used (2 free sessions per new user).</li>
+        <li>To prevent abuse of the free sessions, a <strong>one-way keyed hash of your IP address</strong>, combined with the current date: it cannot be turned back into your IP address, cannot be linked from one day to the next, and is deleted automatically after 48 hours. Your IP address itself is never stored.</li>
         <li><strong>Stripe payment metadata</strong> (see Section 5) — only when you make a purchase.</li>
       </ul>
     </div>
@@ -353,10 +354,10 @@
       <ul>
         <li>The contents of your PDF files — they are never uploaded anywhere.</li>
         <li>Your name, email address or any personally identifiable information.</li>
-        <li>Your IP address beyond what Stripe and Vercel (our infrastructure) log automatically.</li>
+        <li>Your IP address — beyond what Stripe and Vercel (our infrastructure) log automatically, we only keep the daily hash described above.</li>
         <li>Your browser history, browsing behaviour or the websites you visit.</li>
         <li>Any analytics, telemetry or usage events beyond credit consumption.</li>
-        <li>Cookies — we use no cookies.</li>
+        <li>Tracking or advertising cookies. The web editor sets a single first-party cookie, <code>folioUID</code>, containing only your anonymous user ID — a backup of your browser storage so you do not lose purchased credits. It is never shared with third parties.</li>
       </ul>
     </div>
 
@@ -389,8 +390,9 @@
       <ul>
         <li><code>uid</code> — a randomly generated string like <code>u_lxyz_abc123</code></li>
         <li><code>credits</code> — integer, number of sessions remaining</li>
-        <li><code>free_used</code> — boolean</li>
+        <li><code>free_used</code> — integer, free trial sessions used</li>
       </ul>
+      <p>A separate table counts new anonymous IDs per day using the hashed, date-salted value described in Section 2 (never the IP address itself); its rows are deleted after 48 hours.</p>
       <p>There is no way to reverse-engineer your real identity from this data. Supabase privacy policy: <a href="https://supabase.com/privacy" target="_blank" rel="noopener">supabase.com/privacy</a>.</p>
     </div>
 
