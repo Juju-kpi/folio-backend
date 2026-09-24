@@ -1204,7 +1204,7 @@ async function getTextBlocks(num) {
     b.align = align;
   }
   for (const b of H) {
-    const { x0, x1, fh } = box(b);
+    const { x0, x1, y0, y1, fh } = box(b);
     const cell = b.cell;
     const halfGutter = (a, z) => Math.max(0.35 * fh, (z - a) / 2);
     // keep the cell's own inner padding on both sides (mirrors the original text)
@@ -1223,7 +1223,16 @@ async function getTextBlocks(num) {
       const p = b._prev, pR = Math.max(p._colR ?? (p.bbox.x + p.bbox.w), p.bbox.x + p.bbox.w);
       left = Math.max(left, pR < b._colL ? pR + halfGutter(pR, b._colL) : p.bbox.x + p.bbox.w + 0.35 * fh);
     }
-    b.limit = { left: Math.min(left, x0), right: Math.max(right, x1), top: cell.top + 0.5, bottom: cell.bottom - 0.5 };
+    // Rows above / below in the same column: a bigger font stops halfway to them
+    let top = cell.top + 0.5, bottom = cell.bottom - 0.5;
+    for (const o of H) {
+      if (o === b) continue;
+      const q = box(o);
+      if (Math.min(q.x1, right) - Math.max(q.x0, left) <= 0) continue;
+      if (q.y1 <= y0 + 0.25 * fh) top = Math.max(top, (q.y1 + y0) / 2);
+      else if (q.y0 >= y1 - 0.25 * fh) bottom = Math.min(bottom, (q.y0 + y1) / 2);
+    }
+    b.limit = { left: Math.min(left, x0), right: Math.max(right, x1), top: Math.min(top, y0), bottom: Math.max(bottom, y1) };
     delete b._prev; delete b._next;
   }
 
@@ -1324,6 +1333,7 @@ function editFromPanel() {
     text: sanitizeText($('propText').value),
     fontName: $('propFont').value,
     fontSize: clamp(parseFloat($('propSize').value) || block.fontSize, 1, 400),
+    origSize: block.fontSize,
     color: $('propColor').value,
     coverAuto,
     coverColor: coverAuto ? detected.bg : $('propCoverColor').value,
@@ -1331,6 +1341,7 @@ function editFromPanel() {
     bgOpacity: clamp(parseFloat($('propBgOpacity').value) || 0, 0, 1),
     rotation: parseFloat($('propRotation').value) || 0,
     clip: block.cell || null,
+    bounds: block.limit || null,
     limit: $('propFit').checked && block.limit ? block.limit : null,
     align: block.align || 'left',
     anchor: { left: block.bbox.x, right: block.bbox.x + block.bbox.w },
@@ -1342,14 +1353,25 @@ function editFromPanel() {
   };
   edit.drawSize = fittedSize(edit, measure);
   edit.overflow = textOverflows(edit, edit.drawSize, measure);
+  edit.clipText = editNeedsClip(edit, edit.drawSize, edit.overflow);
   return edit;
 }
 
-// Still too wide for the cell at the smallest allowed size → it will be cut at the cell edge
-function textOverflows(e, size, measure) {
+// Still too wide or too tall for the cell at the smallest allowed size → it will be cut at the cell edge
+function textOverflows(e, size, measure, vmeasure = canvasVMetrics(e.fontName)) {
   if (!e.limit || !e.text || (e.rotation || 0) !== 0 || (e.frame && e.frame.angle)) return false;
-  const widest = Math.max(...e.text.split('\n').map(ln => measure(ln, size)));
-  return widest > editAvailWidth(e) + 0.5;
+  const lines = e.text.split('\n');
+  const widest = Math.max(...lines.map(ln => measure(ln, size)));
+  if (widest > editAvailWidth(e) + 0.5) return true;
+  const v = vmeasure(lines);
+  return e.baseline.y - v.asc * size < e.limit.top - 0.5 || e.baseline.y + v.desc * size > e.limit.bottom + 0.5;
+}
+
+// Text cut at the cell / column edge: when it overflows, and as a safety net when it was
+// enlarged (the preview and the PDF fonts can differ slightly in height)
+function editNeedsClip(e, size, overflow) {
+  return !!e.limit && (e.rotation || 0) === 0 && !(e.frame && e.frame.angle) &&
+    (overflow || size > (e.origSize || e.fontSize) + 0.01);
 }
 
 // Clip area for overflowing text: the cell / column, full height of the text
@@ -1382,8 +1404,26 @@ function editLineX(e, width) {
 let _fitCtx = null;
 function fitCtx() { return _fitCtx || (_fitCtx = document.createElement('canvas').getContext('2d')); }
 
-// Font size keeping the new text inside its cell / column (never below half the size)
-function fittedSize(e, measure, minSize = e.fontSize * 0.5) {
+// Height of the text around its first baseline, per unit of font size:
+// asc above it, desc below it (all the lines included)
+function canvasVMetrics(fontName) {
+  return lines => {
+    const ctx = fitCtx();
+    ctx.font = buildCanvasFont(fontName, 100);
+    let asc = 0, desc = 0;
+    lines.forEach((ln, i) => {
+      if (!ln.trim()) return;
+      const m = ctx.measureText(ln);
+      asc  = Math.max(asc, m.actualBoundingBoxAscent / 100 - i * LINE_HEIGHT);
+      desc = Math.max(desc, i * LINE_HEIGHT + m.actualBoundingBoxDescent / 100);
+    });
+    return { asc, desc };
+  };
+}
+
+// Font size keeping the new text inside its cell / column, in width and in height
+// (same baseline); never below half the original size
+function fittedSize(e, measure, minSize = 0.5 * Math.min(e.fontSize, e.origSize || e.fontSize), vmeasure = canvasVMetrics(e.fontName)) {
   let size = e.fontSize;
   const L = e.limit;
   if (!L || !e.text || (e.rotation || 0) !== 0 || e.frame?.angle) return size;
@@ -1393,9 +1433,11 @@ function fittedSize(e, measure, minSize = e.fontSize * 0.5) {
     const widest = Math.max(...lines.map(ln => measure(ln, size)));
     if (widest > availW) size = size * availW / widest * 0.98;
   }
-  const availH = L.bottom - L.top;
-  if (lines.length > 1 && availH > 4 && lines.length * size * LINE_HEIGHT > availH) size = availH / (lines.length * LINE_HEIGHT);
-  return Math.max(Math.round(size * 20) / 20, minSize);
+  const v = vmeasure(lines);
+  const up = e.baseline.y - L.top, down = L.bottom - e.baseline.y;
+  if (v.asc > 0 && up > 0) size = Math.min(size, up / v.asc);
+  if (v.desc > 0 && down > 0) size = Math.min(size, down / v.desc);
+  return Math.max(Math.floor(size * 20) / 20, minSize);
 }
 
 function updateFitWarning(e) {
@@ -1417,6 +1459,12 @@ function coverPoly(e) {
   if (e.frame && e.frame.angle) return framePoly(e.frame, 1);
   const r = e.bbox;
   let x0 = r.x - 1, y0 = r.y - 1, x1 = r.x + r.w + 1, y1 = r.y + r.h + 1;
+  const B = e.bounds;
+  if (B) {
+    // the padding stops halfway to the neighbouring texts (tight rows without borders)
+    x0 = Math.max(x0, Math.min(r.x, B.left)); x1 = Math.min(x1, Math.max(r.x + r.w, B.right));
+    y0 = Math.max(y0, Math.min(r.y, B.top));  y1 = Math.min(y1, Math.max(r.y + r.h, B.bottom));
+  }
   const c = e.clip;
   if (c) {
     // Stay inside the cell: table borders and neighbouring backgrounds survive
@@ -1425,6 +1473,29 @@ function coverPoly(e) {
     if (cx1 - cx0 >= r.w * 0.8 && cy1 - cy0 >= r.h * 0.6) { x0 = cx0; x1 = cx1; y0 = cy0; y1 = cy1; }
   }
   return [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
+}
+
+// Extra background: behind the old and the new text, never outside the cell / column
+function bgPoly(e, size, widths, vmeasure = canvasVMetrics(e.fontName)) {
+  const poly = coverPoly(e);
+  if (!e.text || (e.rotation || 0) !== 0 || (e.frame && e.frame.angle)) return poly;
+  const lines = e.text.split('\n'), v = vmeasure(lines);
+  let x0 = Infinity, x1 = -Infinity;
+  lines.forEach((ln, i) => {
+    if (!ln.trim()) return;
+    const lx = editLineX(e, widths[i]);
+    x0 = Math.min(x0, lx - 1); x1 = Math.max(x1, lx + widths[i] + 1);
+  });
+  if (x0 === Infinity) return poly;
+  const L = e.limit, c = e.clip;
+  const bL = Math.max(L ? L.left : -Infinity, c ? c.left + 0.3 : -Infinity);
+  const bR = Math.min(L ? L.right : Infinity, c ? c.right - 0.3 : Infinity);
+  const bT = Math.max(L ? L.top : -Infinity, c ? c.top + 0.3 : -Infinity);
+  const bB = Math.min(L ? L.bottom : Infinity, c ? c.bottom - 0.3 : Infinity);
+  const X0 = Math.min(poly[0].x, Math.max(x0, bL)), X1 = Math.max(poly[2].x, Math.min(x1, bR));
+  const Y0 = Math.min(poly[0].y, Math.max(e.baseline.y - v.asc * size - 1, bT));
+  const Y1 = Math.max(poly[2].y, Math.min(e.baseline.y + v.desc * size + 1, bB));
+  return [{ x: X0, y: Y0 }, { x: X1, y: Y0 }, { x: X1, y: Y1 }, { x: X0, y: Y1 }];
 }
 
 function fillPoly(ctx, poly) {
@@ -1440,21 +1511,23 @@ function polyPath(poly) {
 
 function drawTextEditCanvas(ctx, e) {
   const poly = coverPoly(e);
+  const size = e.drawSize || e.fontSize;
   ctx.globalAlpha = 1;
   ctx.fillStyle = e.coverColor || '#ffffff';
   fillPoly(ctx, poly);
   if (e.bgOpacity > 0) {
+    ctx.font = buildCanvasFont(e.fontName, size);
+    const widths = (e.text || '').split('\n').map(ln => ctx.measureText(ln).width);
     ctx.globalAlpha = e.bgOpacity;
     ctx.fillStyle = e.bgColor || '#ffffff';
-    fillPoly(ctx, poly);
+    fillPoly(ctx, bgPoly(e, size, widths));
     ctx.globalAlpha = 1;
   }
   ctx.save();
-  const size = e.drawSize || e.fontSize;
   ctx.font = buildCanvasFont(e.fontName, size);
   ctx.fillStyle = e.color || '#000000';
   ctx.textBaseline = 'alphabetic';
-  if (e.overflow && e.limit) {
+  if (e.clipText ?? (e.overflow && e.limit)) {
     const r = editClipRect(e, size);
     ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
   }
@@ -2955,15 +3028,25 @@ async function drawAllChanges(doc, fonts, mapperFor, native) {
     const page = pageOf(e.page);
     const M = await mapperFor(e.page);
     const O = M.pt(0, 0), path = polyPath(coverPoly(e));
+    const bgOpts = { x: O.x, y: O.y, rotate: PDFLib.degrees(M.deg), color: rgbLib(e.bgColor), opacity: e.bgOpacity, borderWidth: 0 };
     page.drawSvgPath(path, { x: O.x, y: O.y, rotate: PDFLib.degrees(M.deg), color: rgbLib(e.coverColor || '#ffffff'), borderWidth: 0 });
-    if (e.bgOpacity > 0) page.drawSvgPath(path, { x: O.x, y: O.y, rotate: PDFLib.degrees(M.deg), color: rgbLib(e.bgColor), opacity: e.bgOpacity, borderWidth: 0 });
-    if (!e.text) continue;
-    const text  = sanitizeText(e.text);
+    const text = e.text ? sanitizeText(e.text) : '';
+    if (!text) {
+      if (e.bgOpacity > 0) page.drawSvgPath(path, bgOpts);
+      continue;
+    }
     const chain = await fonts.chainFor(e.fontName, text);
+    const pdfWidth = (ln, sz) => fonts.width(chain, ln, sz);
     // Same fit as the preview, re-checked with the real PDF font metrics
-    const size = Math.min(e.drawSize || e.fontSize, fittedSize({ ...e, fontSize: e.drawSize || e.fontSize }, (ln, sz) => fonts.width(chain, ln, sz), Math.min(e.drawSize || e.fontSize, e.fontSize * 0.5)));
+    const drawn = e.drawSize || e.fontSize;
+    const size = Math.min(drawn, fittedSize({ ...e, text, fontSize: drawn }, pdfWidth,
+      Math.min(drawn, 0.5 * Math.min(e.fontSize, e.origSize || e.fontSize))));
     const rot = e.rotation || 0, a = rot * Math.PI / 180, lh = size * LINE_HEIGHT;
-    const clipped = textOverflows({ ...e, text }, size, (ln, sz) => fonts.width(chain, ln, sz));
+    if (e.bgOpacity > 0) {
+      const widths = text.split('\n').map(ln => pdfWidth(ln, size));
+      page.drawSvgPath(polyPath(bgPoly({ ...e, text }, size, widths)), bgOpts);
+    }
+    const clipped = editNeedsClip(e, size, textOverflows({ ...e, text }, size, pdfWidth));
     if (clipped) {
       const r = editClipRect(e, size);
       const pts = [M.pt(r.x, r.y), M.pt(r.x + r.w, r.y), M.pt(r.x + r.w, r.y + r.h), M.pt(r.x, r.y + r.h)];

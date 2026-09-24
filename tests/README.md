@@ -55,6 +55,10 @@ Pour chaque fichier :
 2. **Modification** : plusieurs cellules sont modifiées (texte plus long ou plus court),
    puis le PDF exporté est comparé pixel par pixel à l'original. Les bordures du tableau
    doivent être intactes, et ni les autres textes ni les autres cellules ne doivent changer.
+3. **Propriétés** : les mêmes cellules sont modifiées une seconde fois, en changeant aussi
+   la taille de police (×1,6 à ×3), la police, la couleur du texte, le fond et la couleur
+   de masquage. Les contrôles au pixel près sont les mêmes. La suite vérifie aussi qu'une
+   police agrandie l'est vraiment quand la cellule a de la place.
 
 ## Ajouter des PDF de test
 

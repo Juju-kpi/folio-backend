@@ -4,7 +4,9 @@
 //     lines by its author counts as one block per line;
 //  2. editing: several cells are edited (longer and shorter texts), exported and
 //     compared pixel by pixel with the original: table borders intact, other
-//     texts and other cells untouched, new texts present.
+//     texts and other cells untouched, new texts present;
+//  3. same with property changes: font size ×1.6 to ×3, other font, text colour,
+//     extra background, manual cover colour.
 // Fixtures: fixtures/tables/*.pdf + *.json (see generators/).
 const { setup, ORIGIN } = require('../lib/harness');
 const { openFile, TABLES: DIR, OUT } = require('../lib/helpers');
@@ -39,7 +41,7 @@ async function analyse(page, file) {
   return { gt, blocks, res };
 }
 
-async function editAndCheck(page, file, gt, blocks, maxEdits = 6) {
+async function editAndCheck(page, file, gt, blocks, props = false, maxEdits = 6) {
   // cells whose block is found (exact or containing)
   // match each ground-truth cell to the block drawn inside it (same text can appear in many rows)
   const inside = (b, box) => { const cx = b.bbox.x + b.bbox.w / 2, cy = b.bbox.y + b.bbox.h / 2; return cx >= box[0] && cx <= box[0] + box[2] && cy >= box[1] && cy <= box[1] + box[3]; };
@@ -57,17 +59,29 @@ async function editAndCheck(page, file, gt, blocks, maxEdits = 6) {
   const edits = [];
   for (const [n, x] of chosen.entries()) {
     const newText = n % 3 === 2 ? norm(x.c.text).slice(0, 2) : norm(x.c.text) + ' modifié 2026';
-    await page.evaluate(({ key, newText }) => { selectBlock(key); propText.value = newText; propText.dispatchEvent(new Event('input')); }, { key: x.b.key, newText });
+    const mode = props ? n % 5 : -1;
+    await page.evaluate(({ key, newText, mode }) => {
+      selectBlock(key); propText.value = newText;
+      const sz = parseFloat(propSize.value);
+      if (mode === 0) propSize.value = (sz * 2.5).toFixed(1);
+      if (mode === 1) { propFont.value = 'Times-Bold'; propSize.value = (sz * 1.6).toFixed(1); }
+      if (mode === 2) { propColor.value = '#d01010'; propBgColor.value = '#ffe000'; propBgOpacity.value = '1'; }
+      if (mode === 3) { propCoverAuto.checked = false; propCoverColor.value = '#40a0ff'; propSize.value = (sz * 3).toFixed(1); }
+      if (mode === 4) { propFont.value = 'Courier-Bold'; propColor.value = '#00aa00'; propBgColor.value = '#ff00ff'; propBgOpacity.value = '0.5'; }
+      propText.dispatchEvent(new Event('input'));
+    }, { key: x.b.key, newText, mode });
     await page.click('#applyProps');
     await page.waitForFunction(k => textEdits.has(k), x.b.key, { timeout: 15000 });
-    edits.push({ key: x.b.key, newText, cell: x.c, bbox: x.b.bbox });
+    const grew = await page.evaluate(k => { const e = textEdits.get(k); return e.fontSize > e.origSize ? e.drawSize > e.origSize + 0.01 : null; }, x.b.key);
+    edits.push({ key: x.b.key, newText, cell: x.c, bbox: x.b.bbox, grew });
   }
   const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.click('#btnExport')]);
-  const outPath = path.join(OUT, 'struct_' + path.basename(file));
+  const outPath = path.join(OUT, (props ? 'props_' : 'struct_') + path.basename(file));
   await dl.saveAs(outPath);
   await page.waitForFunction(() => document.getElementById('loadingOverlay').classList.contains('hidden'));
   const orig = fs.readFileSync(file).toString('base64'), exp = fs.readFileSync(outPath).toString('base64');
-  return page.evaluate(async ({ orig, exp, edits, others, hasBoxes, otherCells }) => {
+  const bigger = edits.filter(e => e.grew !== null);
+  const res = await page.evaluate(async ({ orig, exp, edits, others, hasBoxes, otherCells }) => {
     const S = 2;
     async function render(b64) {
       const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
@@ -108,7 +122,11 @@ async function editAndCheck(page, file, gt, blocks, maxEdits = 6) {
     const missing = edits.filter(e => !n(B.text).includes(e.newText.split(' ')[0])).map(e => e.newText);
     return { rulePx, ruleDamaged, ruleSmp, outside, outsideSamples, textDamage, cellSpill, missing, nEdits: edits.length };
   }, { orig, exp, edits, others: blocks.filter(b => !edits.some(e => e.key === b.key)).map(b => b.bbox), hasBoxes: gt.cells.some(c => c.box) && !gt.noVerticalBorders, otherCells: gt.cells.filter(c => c.box && !edits.some(e => e.cell === c || (e.cell.box && c.box && e.cell.box.join() === c.box.join()))).map(c => c.box) });
+  return { ...res, bigger: bigger.length, grew: bigger.filter(e => e.grew).length };
 }
+
+const edBad = ed => ed && (ed.error || ed.ruleDamaged > 12 || ed.outside > 8 || ed.missing.length);
+const edStr = ed => !ed ? '' : ed.error ? `EDIT-ERROR ${ed.error}` : `rules ${ed.ruleDamaged}/${ed.rulePx} damaged${ed.ruleSmp?.length ? ' @' + ed.ruleSmp.join(' ') : ''} · text ${ed.textDamage}px · cells ${ed.cellSpill}px${ed.outsideSamples.length ? ' @' + ed.outsideSamples.join(' ') : ''}${ed.missing.length ? ' · missing ' + ed.missing.join('|') : ''}`;
 
 (async () => {
   const only = process.argv[2];
@@ -121,20 +139,32 @@ async function editAndCheck(page, file, gt, blocks, maxEdits = 6) {
     await openFile(page, path.join(DIR, f));
     await page.waitForFunction(() => getPageInfo(1)?.blocks, null, { timeout: 30000 });
     const { gt, blocks, res } = await analyse(page, path.join(DIR, f));
-    let ed = null;
-    if (gt.cells.length) { try { ed = await editAndCheck(page, path.join(DIR, f), gt, blocks); } catch (e) { ed = { error: e.message.slice(0, 120) }; } }
+    let ed = null, edp = null;
+    if (gt.cells.length) {
+      try { ed = await editAndCheck(page, path.join(DIR, f), gt, blocks); } catch (e) { ed = { error: e.message.slice(0, 120) }; }
+      // same cells again, from the original, with size / font / colour / background changes
+      await page.evaluate(() => { textEdits.clear(); draftEdit = null; composite(); });
+      try { edp = await editAndCheck(page, path.join(DIR, f), gt, blocks, true); } catch (e) { edp = { error: e.message.slice(0, 120) }; }
+    }
     const errs = logs.filter(l => /pageerror|\[error\]/.test(l));
-    rows.push({ f, res, ed, errs });
-    const edStr = !ed ? '' : ed.error ? `EDIT-ERROR ${ed.error}` : `rules ${ed.ruleDamaged}/${ed.rulePx} damaged${ed.ruleSmp?.length ? ' @' + ed.ruleSmp.join(' ') : ''} · text ${ed.textDamage}px · cells ${ed.cellSpill}px${ed.outsideSamples.length ? ' @' + ed.outsideSamples.join(' ') : ''}${ed.missing.length ? ' · missing ' + ed.missing.join('|') : ''}`;
-    const bad = res.merged.length || res.split.length || errs.length || (ed && (ed.error || ed.ruleDamaged > 12 || ed.outside > 8 || ed.missing.length));
-    console.log(`${bad ? '  ✘' : '  ✔'} ${f.padEnd(30)} blocks ${String(res.ok).padStart(3)}/${String(res.total).padEnd(3)} merged ${String(res.merged.length).padStart(3)} split ${String(res.split.length).padStart(3)} | ${edStr}${errs.length ? ' | ERRORS ' + errs.length : ''}`);
+    rows.push({ f, res, ed, edp, errs });
+    const bad = res.merged.length || res.split.length || errs.length || edBad(ed) || edBad(edp);
+    console.log(`${bad ? '  ✘' : '  ✔'} ${f.padEnd(30)} blocks ${String(res.ok).padStart(3)}/${String(res.total).padEnd(3)} merged ${String(res.merged.length).padStart(3)} split ${String(res.split.length).padStart(3)} | ${edStr(ed)}${edp ? ' | props: ' + edStr(edp) : ''}${errs.length ? ' | ERRORS ' + errs.length : ''}`);
     if (process.env.V) { res.merged.slice(0, 3).forEach(m => console.log('     merged', m)); res.split.slice(0, 3).forEach(m => console.log('     split', m)); errs.slice(0, 2).forEach(m => console.log('     ', m.slice(0, 160))); }
     await browser.close();
   }
-  const tot = rows.reduce((a, r) => ({ ok: a.ok + r.res.ok, total: a.total + r.res.total, merged: a.merged + r.res.merged.length, split: a.split + r.res.split.length, dmg: a.dmg + (r.ed?.ruleDamaged > 12 ? 1 : 0), out: a.out + (r.ed?.outside > 8 ? 1 : 0) }), { ok: 0, total: 0, merged: 0, split: 0, dmg: 0, out: 0 });
-  const failed = rows.filter(r => r.res.merged.length || r.res.split.length || r.errs.length ||
-    (r.ed && (r.ed.error || r.ed.ruleDamaged > 12 || r.ed.outside > 8 || r.ed.missing.length)));
+  const hit = (r, k) => (r.ed?.[k] ?? 0) + (r.edp?.[k] ?? 0);
+  const tot = rows.reduce((a, r) => ({ ok: a.ok + r.res.ok, total: a.total + r.res.total, merged: a.merged + r.res.merged.length, split: a.split + r.res.split.length,
+    dmg: a.dmg + (r.ed?.ruleDamaged > 12 || r.edp?.ruleDamaged > 12 ? 1 : 0), out: a.out + (r.ed?.outside > 8 || r.edp?.outside > 8 ? 1 : 0),
+    bigger: a.bigger + hit(r, 'bigger'), grew: a.grew + hit(r, 'grew') }), { ok: 0, total: 0, merged: 0, split: 0, dmg: 0, out: 0, bigger: 0, grew: 0 });
+  const failed = rows.filter(r => r.res.merged.length || r.res.split.length || r.errs.length || edBad(r.ed) || edBad(r.edp));
   if (failed.length) { process.exitCode = 1; console.log('\n  ✘ ' + failed.length + ' file(s) failed: ' + failed.map(r => r.f).join(', ')); }
-  else console.log('\n  ✔ all ' + rows.length + ' files: structure detected and preserved by edits');
+  else console.log('\n  ✔ all ' + rows.length + ' files: structure detected and preserved by edits (text, then size / font / colours / background)');
+  // a bigger font is really applied wherever the cell leaves room (not always shrunk back)
+  if (!only) {
+    const grown = tot.grew >= tot.bigger * 0.25;
+    if (!grown) process.exitCode = 1;
+    console.log(`  ${grown ? '✔' : '✘'} bigger font requested ${tot.bigger}×, drawn bigger ${tot.grew}× (the rest shrunk to fit its cell)`);
+  }
   console.log(`TOTAL cells exact ${tot.ok}/${tot.total} (${(100 * tot.ok / tot.total).toFixed(1)}%) · merged ${tot.merged} · split ${tot.split} · files with damaged rules ${tot.dmg} · files with changes outside edited cells ${tot.out}`);
 })();
