@@ -434,7 +434,7 @@ const WebPayment = (() => {
       reason === 'no_credits' ? 'Editing credit needed' : 'Editing credits'));
     const st = _lastStatus;
     const sub = reason === 'no_credits'
-      ? 'Your free sessions have been used. Choose a credit pack to continue editing.'
+      ? 'No free session left. Choose a credit pack to continue editing — one session covers a whole document.'
       : st?.lifetime_free ? 'You have unlimited access. Thank you!'
       : st ? `Balance: ${Number(st.credits) || 0} credit(s) + ${Number(st.freeRemaining) || 0} free session(s). One session = one document, all tools included.`
       : 'One session = one document, all tools included.';

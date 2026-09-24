@@ -2,11 +2,12 @@
 // GET /api/status?uid=USER_ID
 // Returns: { uid, credits, free_used, freeRemaining, lifetime_free }
 import {
-  FREE_SESSIONS, isValidUID, getUserRow, insertUser,
+  FREE_SESSIONS, isValidUID, getUserRow, insertUser, registerNewUid,
   normalizeCredits, normalizeFreeUsed, createRateLimiter, clientIp,
 } from '../lib/folio-api.js';
 
-// Limite la création de nouveaux UID par IP (chaque UID reçoit des sessions gratuites).
+// Anti-rafale (en mémoire) sur la création de nouveaux UID. La limite durable
+// (sessions gratuites par IP et par jour) est tenue en base : registerNewUid().
 const isCreationLimited = createRateLimiter(20, 10 * 60_000);
 const isReadLimited     = createRateLimiter(120, 60_000);
 
@@ -26,8 +27,16 @@ export default async function handler(req, res) {
 
     if (!row) {
       if (isCreationLimited(ip)) return res.status(429).json({ error: 'rate_limited' });
-      await insertUser({ uid, credits: 0, free_used: 0 });  // 0 = aucune session utilisée
-      return res.status(200).json(format({ uid, credits: 0, free_used: 0, lifetime_free: false }));
+      // Au-delà du quota de l'IP pour la journée (effacer les données du navigateur
+      // pour obtenir un nouvel UID), le nouvel UID n'a pas de session gratuite.
+      const allowFree = await registerNewUid(ip);
+      const freeUsed  = allowFree ? 0 : FREE_SESSIONS;
+      const created   = await insertUser({ uid, credits: 0, free_used: freeUsed });
+      if (!created) {
+        const existing = await getUserRow(uid);   // créé par une requête concurrente
+        if (existing) return res.status(200).json(format(existing));
+      }
+      return res.status(200).json(format({ uid, credits: 0, free_used: freeUsed, lifetime_free: false }));
     }
 
     return res.status(200).json(format(row));
