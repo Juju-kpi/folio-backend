@@ -1,6 +1,7 @@
 // api/consume.js
-// POST /api/consume  { uid: string }
-// Returns: { ok: true, creditsLeft, usedFree?, freeRemaining?, usedLifetimeFree? }
+// POST /api/consume  { uid: string, docKey?: string, session?: string }
+// Returns: { ok: true, creditsLeft, usedFree?, freeRemaining?, usedLifetimeFree?, session?, sessionExpires? }
+//       or { ok: true, sessionValid: true }        (jeton de session valide : rien n'est décompté)
 //       or { ok: false, reason: 'no_credits' | 'rate_limited' | 'busy' }
 // Logic:
 //   - UID must already exist (created by /api/status on first load) — no auto-create here
@@ -10,29 +11,43 @@
 //   - Else                         → deny
 // Les écritures sont conditionnelles (verrouillage optimiste) : deux appels
 // simultanés ne peuvent plus consommer le même crédit / la même session gratuite.
+// Session d'édition : avec `docKey` (empreinte du document), une consommation
+// réussie renvoie un jeton signé valable 12 h ; le client le présente pour les
+// actions suivantes sur ce document, sans nouveau décompte. Sans docKey
+// (extension Chrome), comportement inchangé.
 import {
-  FREE_SESSIONS, isValidUID, updateUserAtomically,
+  FREE_SESSIONS, isValidUID, isValidDocKey, updateUserAtomically, signSession, verifySession,
   normalizeCredits, normalizeFreeUsed, createRateLimiter, clientIp, parseJsonBody,
 } from '../lib/folio-api.js';
 
-// Le client ne consomme plus qu'une fois par document ouvert : 15/min laisse
-// de la marge (plusieurs onglets, extension) tout en bloquant les scripts.
+// Décompte réel : 15/min laisse de la marge (plusieurs onglets, extension) tout en bloquant les scripts.
 const isRateLimited = createRateLimiter(15, 60_000);
+// Vérification d'un jeton (aucun décompte) : plus permissif.
+const isSessionRateLimited = createRateLimiter(240, 60_000);
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   res.setHeader('Cache-Control', 'no-store');
 
-  if (isRateLimited(clientIp(req))) {
-    return res.status(429).json({ ok: false, reason: 'rate_limited' });
-  }
-
   let body;
   try { body = parseJsonBody(req); }
   catch { return res.status(400).json({ error: 'Invalid JSON' }); }
 
-  const uid = body?.uid;
+  const ip     = clientIp(req);
+  const uid    = body?.uid;
+  const docKey = isValidDocKey(body?.docKey) ? body.docKey : null;
+
+  // Jeton de session valide pour ce document : autorisé sans décompte
+  if (docKey && body?.session && verifySession(uid, docKey, body.session)) {
+    if (isSessionRateLimited(ip)) return res.status(429).json({ ok: false, reason: 'rate_limited' });
+    return res.status(200).json({ ok: true, sessionValid: true });
+  }
+
+  if (isRateLimited(ip)) {
+    return res.status(429).json({ ok: false, reason: 'rate_limited' });
+  }
+
   // Ne jamais révéler pourquoi l'UID est refusé : le client affiche la modale de paiement.
   if (!isValidUID(uid)) {
     return res.status(200).json({ ok: false, reason: 'no_credits', creditsLeft: 0 });
@@ -40,6 +55,10 @@ export default async function handler(req, res) {
 
   try {
     const result = await tryConsume(uid);
+    if (result.ok && docKey) {
+      const s = signSession(uid, docKey);
+      if (s) { result.session = s.token; result.sessionExpires = s.expires; }
+    }
     return res.status(200).json(result);
   } catch (e) {
     if (e.code === 'CONFLICT') return res.status(200).json({ ok: false, reason: 'busy' });

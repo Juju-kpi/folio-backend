@@ -15,6 +15,8 @@
 // Paywall
 //   - Une "session d'édition" = un document ouvert : le crédit est consommé une
 //     seule fois par document (et non plus à chaque clic sur "Apply"), pendant 12 h.
+//   - La session est un jeton signé par le serveur et revérifié par /api/consume :
+//     écrire dans le stockage du navigateur ne donne aucun accès gratuit.
 //   - Appels concurrents dédupliqués (double-clic = une seule consommation).
 //   - Checkout Stripe ouvert sans être bloqué par les anti-popups, puis détection
 //     automatique des crédits ajoutés.
@@ -25,7 +27,7 @@ const WebPayment = (() => {
   const UID_RE      = /^u_[0-9a-z]{6,12}_[0-9a-z]{6,12}$/;
   const UID_KEY     = 'folioUID';
   const SESSIONS_KEY = 'folioPaidSessions';
-  const SESSION_TTL = 12 * 60 * 60 * 1000;
+  const VERIFIED_TTL = 5 * 60 * 1000;   // revérification serveur au plus toutes les 5 min
 
   // ── Stockage tolérant aux erreurs ─────────────────────────────────────────
   const memStore = new Map();
@@ -105,13 +107,15 @@ const WebPayment = (() => {
   // ── Sessions d'édition par document ───────────────────────────────────────
   let _docKey = null;
 
+  // { "<uid>:<docKey>": { token, exp } } — le jeton n'a de valeur que signé par le serveur
   function readSessions() {
     let data = {};
     try { data = JSON.parse(lsGet(SESSIONS_KEY) || '{}') || {}; } catch { data = {}; }
     const now = Date.now();
     let changed = false;
     for (const k of Object.keys(data)) {
-      if (typeof data[k] !== 'number' || data[k] < now) { delete data[k]; changed = true; }
+      const e = data[k];
+      if (!e || typeof e.token !== 'string' || typeof e.exp !== 'number' || e.exp < now) { delete data[k]; changed = true; }
     }
     if (changed) lsSet(SESSIONS_KEY, JSON.stringify(data));
     return data;
@@ -121,20 +125,31 @@ const WebPayment = (() => {
 
   function setDocument(docKey) { _docKey = docKey ? String(docKey) : null; }
 
-  function hasActiveSession(docKey = _docKey) {
-    if (!docKey) return false;
-    return !!readSessions()[sessionId(docKey)];
+  function sessionFor(docKey = _docKey) {
+    if (!docKey) return null;
+    return readSessions()[sessionId(docKey)] || null;
   }
 
-  function recordSession(docKey = _docKey) {
-    if (!docKey) return;
+  // Indicatif (affichage) : la validité réelle est décidée par le serveur
+  function hasActiveSession(docKey = _docKey) { return !!sessionFor(docKey); }
+
+  function recordSession(docKey, token, exp) {
+    if (!docKey || !token || !exp) return;
     const data = readSessions();
-    data[sessionId(docKey)] = Date.now() + SESSION_TTL;
-    // Garder la liste courte
+    data[sessionId(docKey)] = { token, exp };
     const keys = Object.keys(data);
-    if (keys.length > 50) keys.sort((a, b) => data[a] - data[b]).slice(0, keys.length - 50).forEach(k => delete data[k]);
+    if (keys.length > 50) keys.sort((a, b) => data[a].exp - data[b].exp).slice(0, keys.length - 50).forEach(k => delete data[k]);
     lsSet(SESSIONS_KEY, JSON.stringify(data));
   }
+
+  function dropSession(docKey) {
+    const data = readSessions();
+    delete data[sessionId(docKey)];
+    lsSet(SESSIONS_KEY, JSON.stringify(data));
+  }
+
+  // Validations serveur récentes, en mémoire uniquement (hors de portée du stockage)
+  const _verified = new Map();
 
   // ── Statut ────────────────────────────────────────────────────────────────
   let _lastStatus = null;
@@ -162,21 +177,21 @@ const WebPayment = (() => {
   function lastStatus() { return _lastStatus; }
 
   // ── Consommation ──────────────────────────────────────────────────────────
-  async function consumeOnce() {
+  async function consumeOnce(extra) {
     const r = await fetch(`${API_BASE}/api/consume`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ uid: getUID() }),
+      body: JSON.stringify({ uid: getUID(), ...extra }),
     });
     if (r.status === 429) return { ok: false, reason: 'rate_limited' };
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   }
 
-  async function consume() {
+  async function consume(extra = {}) {
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const res = await consumeOnce();
+        const res = await consumeOnce(extra);
         if (res?.reason === 'busy' && attempt < 2) { await sleep(300 * (attempt + 1)); continue; }
         return res;
       } catch (e) {
@@ -192,44 +207,74 @@ const WebPayment = (() => {
   let _inflight = null;
 
   async function canEdit() {
-    if (hasActiveSession()) return true;
+    const docKey = _docKey;
+    const sid = docKey ? sessionId(docKey) : null;
+    if (sid && (_verified.get(sid) || 0) > Date.now()) return true;
     if (_inflight) return _inflight;           // double-clic : une seule consommation
     _inflight = (async () => {
       try {
-        const result = await consume();
-
-        if (result === null) {
-          _showToast('❌ Server connection required to edit', 'error');
-          return false;
-        }
-
-        if (result.ok) {
-          recordSession();
-          if (result.usedLifetimeFree) {
-            // accès illimité : rien à signaler
-          } else if (result.usedFree) {
-            const left = Number.isFinite(result.freeRemaining) ? result.freeRemaining : null;
-            _showToast(left === null ? '✨ Free editing session started'
-              : `✨ Free editing session started — ${left} free left`, 'success');
-          } else {
-            _showToast(`✓ Editing session started — ${result.creditsLeft} credit(s) left`, 'success');
+        // 1. Session déjà payée pour ce document : le serveur vérifie la signature
+        const existing = sessionFor(docKey);
+        if (existing) {
+          const check = await consume({ docKey, session: existing.token });
+          if (check === null) {
+            _showToast('❌ Server connection required to edit', 'error');
+            return false;
           }
-          getStatus();   // rafraîchit l'affichage des crédits
-          return true;
+          if (check.ok && check.sessionValid) {
+            _verified.set(sid, Math.min(Date.now() + VERIFIED_TTL, existing.exp));
+            return true;
+          }
+          if (check.reason === 'rate_limited' || check.reason === 'busy') {
+            _showToast('⏳ Too many requests — please retry in a few seconds', 'error');
+            return false;
+          }
+          dropSession(docKey);
+          // jeton refusé : la réponse est déjà une consommation normale
+          if (check.ok || check.reason === 'no_credits') return handleConsumeResult(check, docKey, sid);
         }
 
-        if (result.reason === 'rate_limited' || result.reason === 'busy') {
-          _showToast('⏳ Too many requests — please retry in a few seconds', 'error');
-          return false;
-        }
-
-        _showPaymentModal({ reason: 'no_credits' });
-        return false;
+        // 2. Nouvelle session
+        const result = await consume(docKey ? { docKey } : {});
+        return handleConsumeResult(result, docKey, sid);
       } finally {
         _inflight = null;
       }
     })();
     return _inflight;
+  }
+
+  function handleConsumeResult(result, docKey, sid) {
+    if (result === null) {
+      _showToast('❌ Server connection required to edit', 'error');
+      return false;
+    }
+
+    if (result.ok) {
+      if (result.session && docKey) {
+        recordSession(docKey, result.session, result.sessionExpires);
+        _verified.set(sid, Math.min(Date.now() + VERIFIED_TTL, result.sessionExpires));
+      }
+      if (result.usedLifetimeFree) {
+        // accès illimité : rien à signaler
+      } else if (result.usedFree) {
+        const left = Number.isFinite(result.freeRemaining) ? result.freeRemaining : null;
+        _showToast(left === null ? '✨ Free editing session started'
+          : `✨ Free editing session started — ${left} free left`, 'success');
+      } else {
+        _showToast(`✓ Editing session started — ${result.creditsLeft} credit(s) left`, 'success');
+      }
+      getStatus();   // rafraîchit l'affichage des crédits
+      return true;
+    }
+
+    if (result.reason === 'rate_limited' || result.reason === 'busy') {
+      _showToast('⏳ Too many requests — please retry in a few seconds', 'error');
+      return false;
+    }
+
+    _showPaymentModal({ reason: 'no_credits' });
+    return false;
   }
 
   // ── Checkout Stripe ───────────────────────────────────────────────────────
