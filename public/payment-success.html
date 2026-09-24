@@ -92,6 +92,15 @@
       letter-spacing: 0.2px;
     }
     .close-btn:hover { background: #f0ff6e; }
+
+    .back-link {
+      display: block;
+      margin-top: 16px;
+      color: #a0a0b0;
+      font-size: 13px;
+      text-decoration: none;
+    }
+    .back-link:hover { color: #e8ff47; }
   </style>
 </head>
 <body>
@@ -99,12 +108,21 @@
     <div class="logo">F</div>
     <div class="checkmark">✓</div>
     <h1>Paiement confirmé !</h1>
-    <p>Vos crédits ont été ajoutés à votre compte Folio PDF Studio.</p>
-    <p>Vous pouvez fermer cette page et retourner à l'extension.</p>
+    <p>Vos crédits sont ajoutés à votre compte Folio PDF Studio dans quelques secondes.</p>
+    <p>Vous pouvez fermer cette page et retourner à l'éditeur ou à l'extension.</p>
     <div class="note">
-      💡 Vos crédits sont disponibles immédiatement. Rouvrez simplement votre PDF dans l'éditeur.
+      💡 L'éditeur ouvert dans votre autre onglet se met à jour automatiquement.
+      Sinon, rouvrez simplement votre PDF dans l'éditeur.
     </div>
-    <button class="close-btn" onclick="window.close()">Fermer cette page</button>
+    <button class="close-btn" id="closeBtn" type="button">Fermer cette page</button>
+    <a class="back-link" href="/web-editor.html">Retour à l'éditeur web →</a>
   </div>
+  <script>
+    document.getElementById('closeBtn').addEventListener('click', function () {
+      window.close();
+      // window.close() est ignoré si l'onglet n'a pas été ouvert par un script
+      setTimeout(function () { location.href = '/web-editor.html'; }, 300);
+    });
+  </script>
 </body>
 </html>
