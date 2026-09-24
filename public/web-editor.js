@@ -853,6 +853,112 @@ function framePoly(frame, pad = 0) {
   return [toXY(u0, v0), toXY(u1, v0), toXY(u1, v1), toXY(u0, v1)];
 }
 
+// ── Page graphics: table rules and cell backgrounds ─────────────────────────
+// Read from the PDF.js operator list (same data used for rendering), converted
+// to page units. Used to keep each table cell as its own text block and to keep
+// edits inside their cell (cover and new text never cross a border).
+async function getPageGraphics(num) {
+  const info = getPageInfo(num);
+  if (info.graphics) return info.graphics;
+  const out = { v: [], h: [], fills: [] };
+  try {
+    const page = await pdfDoc.getPage(num);
+    const vp1  = page.getViewport({ scale: 1 });
+    const ol   = await page.getOperatorList();
+    const O    = pdfjsLib.OPS;
+    const T    = pdfjsLib.Util.transform;
+    let ctm = [1, 0, 0, 1, 0, 0], lw = 1, pending = null;
+    const stack = [];
+    const MAX_ITEMS = 40000;
+
+    const buildPath = args => {
+      const ops = args[0] || [], c = args[1] || [];
+      const m = T(vp1.transform, ctm);
+      const P = (x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+      const scale = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])) || 1;
+      const segs = [], rects = [];
+      let j = 0, cx = 0, cy = 0, sx = 0, sy = 0;
+      for (const op of ops) {
+        if (op === O.moveTo) { cx = sx = c[j]; cy = sy = c[j + 1]; j += 2; }
+        else if (op === O.lineTo) { segs.push([...P(cx, cy), ...P(c[j], c[j + 1])]); cx = c[j]; cy = c[j + 1]; j += 2; }
+        else if (op === O.curveTo) { cx = c[j + 4]; cy = c[j + 5]; j += 6; }
+        else if (op === O.curveTo2 || op === O.curveTo3) { cx = c[j + 2]; cy = c[j + 3]; j += 4; }
+        else if (op === O.closePath) { segs.push([...P(cx, cy), ...P(sx, sy)]); cx = sx; cy = sy; }
+        else if (op === O.rectangle) {
+          const x = c[j], y = c[j + 1], w = c[j + 2], h = c[j + 3]; j += 4;
+          const pts = [P(x, y), P(x + w, y), P(x + w, y + h), P(x, y + h)];
+          const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+          const axis = Math.abs(pts[0][0] - pts[1][0]) < 0.01 || Math.abs(pts[0][1] - pts[1][1]) < 0.01;
+          if (axis) rects.push([Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]);
+          cx = sx = x; cy = sy = y;
+        }
+      }
+      return { segs, rects, lw: Math.max((lw || 0) * scale, 0.25) };
+    };
+
+    const commit = (path, mode) => {
+      if (!path || out.v.length + out.h.length + out.fills.length > MAX_ITEMS) return;
+      const stroke = mode !== 'fill', fill = mode !== 'stroke';
+      if (stroke) {
+        for (const [x0, y0, x1, y1] of path.segs) {
+          const dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+          if (dx <= 0.8 && dy >= 4) out.v.push({ x: (x0 + x1) / 2, y0: Math.min(y0, y1), y1: Math.max(y0, y1), w: path.lw });
+          else if (dy <= 0.8 && dx >= 4) out.h.push({ y: (y0 + y1) / 2, x0: Math.min(x0, x1), x1: Math.max(x0, x1), w: path.lw });
+        }
+      }
+      for (const [x0, y0, x1, y1] of path.rects) {
+        const w = x1 - x0, h = y1 - y0;
+        const extra = stroke ? path.lw : 0;
+        if (w <= 3 && h >= 4) out.v.push({ x: (x0 + x1) / 2, y0, y1, w: w + extra });
+        else if (h <= 3 && w >= 4) out.h.push({ y: (y0 + y1) / 2, x0, x1, w: h + extra });
+        else {
+          if (stroke) {
+            out.v.push({ x: x0, y0, y1, w: path.lw }, { x: x1, y0, y1, w: path.lw });
+            out.h.push({ y: y0, x0, x1, w: path.lw }, { y: y1, x0, x1, w: path.lw });
+          }
+          if (fill && w >= 4 && h >= 4) out.fills.push({ x0, y0, x1, y1 });
+        }
+      }
+    };
+
+    for (let i = 0; i < ol.fnArray.length; i++) {
+      const fn = ol.fnArray[i], args = ol.argsArray[i];
+      if (fn === O.save) stack.push([ctm, lw]);
+      else if (fn === O.restore) { const st = stack.pop(); if (st) [ctm, lw] = st; }
+      else if (fn === O.transform) ctm = T(ctm, args);
+      else if (fn === O.paintFormXObjectBegin) { stack.push([ctm, lw]); if (Array.isArray(args?.[0])) ctm = T(ctm, args[0]); }
+      else if (fn === O.paintFormXObjectEnd) { const st = stack.pop(); if (st) [ctm, lw] = st; }
+      else if (fn === O.setLineWidth) lw = args[0];
+      else if (fn === O.constructPath) pending = buildPath(args);
+      else if (fn === O.stroke || fn === O.closeStroke) { commit(pending, 'stroke'); pending = null; }
+      else if (fn === O.fill || fn === O.eoFill) { commit(pending, 'fill'); pending = null; }
+      else if (fn === O.fillStroke || fn === O.eoFillStroke || fn === O.closeFillStroke || fn === O.closeEOFillStroke) { commit(pending, 'both'); pending = null; }
+      else if (fn === O.endPath) pending = null;
+    }
+
+    // Adjacent cell backgrounds (tables coloured per cell): their shared edge separates cells
+    const fills = out.fills.filter(f => (f.x1 - f.x0) < vp1.width * 0.95 || (f.y1 - f.y0) < vp1.height * 0.95);
+    out.fills = fills;
+    out.cellEdges = [];
+    if (fills.length < 5000) {
+      for (const f of fills) {
+        for (const g of fills) {
+          if (g === f || g.x0 < f.x1 - 0.8) continue;
+          const gap = g.x0 - f.x1;
+          const ov = Math.min(f.y1, g.y1) - Math.max(f.y0, g.y0);
+          if (gap <= 3 && ov > 0.5 * Math.min(f.y1 - f.y0, g.y1 - g.y0)) {
+            out.cellEdges.push({ x: f.x1 + gap / 2, y0: Math.max(f.y0, g.y0), y1: Math.min(f.y1, g.y1), w: Math.max(gap, 0.3) });
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Folio] page graphics unavailable:', e);
+  }
+  info.graphics = out;
+  return out;
+}
+
 async function getTextBlocks(num) {
   const info = getPageInfo(num);
   if (info.blocks) return info.blocks;
@@ -860,11 +966,14 @@ async function getTextBlocks(num) {
   const content = await page.getTextContent();
   const vp1     = page.getViewport({ scale: 1 });
   const styles  = content.styles || {};
+  const gfx     = await getPageGraphics(num);
+  const vseps   = [...gfx.v, ...(gfx.cellEdges || [])];
 
   // Every item is placed in its own text frame: u along the baseline, v across it
   // (for horizontal text u = x, v = y). Grouping happens per orientation, so
   // rotated pages / vertical labels get proper multi-word blocks too.
   const items = [];
+  const pushItem = (it, str, u, w, base) => items.push({ ...base, str, u, w });
   for (const it of content.items) {
     if (!it.str || !it.str.trim()) continue;
     const tx = pdfjsLib.Util.transform(vp1.transform, it.transform);
@@ -879,11 +988,35 @@ async function getTextBlocks(num) {
     if (Math.abs(angle) < 0.035) angle = 0;
     const bucket = st.vertical ? 'v' + items.length : String(Math.round(angle / 0.02));
     const c = Math.cos(angle), sn = Math.sin(angle);
-    items.push({
-      str: it.str, fh, angle, bucket, w: Math.abs(it.width || 0), asc, desc,
-      u: tx[4] * c + tx[5] * sn, v: -tx[4] * sn + tx[5] * c,
+    const base = {
+      fh, angle, bucket, asc, desc, v: -tx[4] * sn + tx[5] * c,
       fontId: it.fontName, family: st.fontFamily || '',
-    });
+    };
+    const u = tx[4] * c + tx[5] * sn, w = Math.abs(it.width || 0);
+    if (angle !== 0 || !vseps.length) { pushItem(it, it.str, u, w, base); continue; }
+    // A single text run crossing a table border (several cells in one string): cut it at the border
+    const top = base.v - asc * fh, bottom = base.v - desc * fh;
+    const cuts = vseps.filter(r => r.x > u + fh * 0.4 && r.x < u + w - fh * 0.4 && Math.min(r.y1, bottom) - Math.max(r.y0, top) > (bottom - top) * 0.5)
+      .map(r => r.x).sort((a, b) => a - b);
+    if (!cuts.length) { pushItem(it, it.str, u, w, base); continue; }
+    const total = measureRatio(it.str, it.str.length) || 1;
+    let from = 0;
+    for (const x of [...cuts, Infinity]) {
+      let k = it.str.length;
+      if (x !== Infinity) {
+        k = from;
+        while (k < it.str.length && u + w * measureRatio(it.str, k + 1) / total <= x) k++;
+      }
+      const part = it.str.slice(from, k);
+      const pu0 = u + w * measureRatio(it.str, from) / total, pu1 = u + w * measureRatio(it.str, k) / total;
+      const lead = part.length - part.trimStart().length, trail = part.length - part.trimEnd().length;
+      if (part.trim()) {
+        const a = pu0 + (pu1 - pu0) * (measureRatio(part, lead) / (measureRatio(part, part.length) || 1));
+        const b = pu0 + (pu1 - pu0) * (measureRatio(part, part.length - trail) / (measureRatio(part, part.length) || 1));
+        pushItem(it, part.trim(), a, Math.max(b - a, 0.5), base);
+      }
+      from = k;
+    }
   }
 
   const blocks = [];
@@ -924,6 +1057,7 @@ async function getTextBlocks(num) {
       fontLabel: fInfo?.name || famItem.family || '',
       rotation: Math.round(-angle * 180 / Math.PI),
     });
+    return blocks[blocks.length - 1];
   };
 
   const buckets = new Map();
@@ -933,7 +1067,8 @@ async function getTextBlocks(num) {
   }
   for (const group of buckets.values()) {
     const angle = group[0].angle;
-    // Lines (same v), then segments separated by large gaps (columns / cells)
+    const horizontal = angle === 0;
+    // Lines (same v)
     const sorted = group.sort((a, b) => a.v - b.v || a.u - b.u);
     const lines = [];
     for (const it of sorted) {
@@ -947,19 +1082,149 @@ async function getTextBlocks(num) {
       line.fh = Math.max(line.fh, it.fh);
     }
     for (const line of lines) {
-      const its = line.items.sort((a, b) => a.u - b.u);
+      line.items.sort((a, b) => a.u - b.u);
+      // dedupe fake-bold duplicates
+      line.items = line.items.filter((it, i, arr) => !arr.slice(0, i).some(g => g.str === it.str && Math.abs(g.u - it.u) < it.fh * 0.3));
+      line.top = Math.min(...line.items.map(i => i.v - i.asc * i.fh));
+      line.bottom = Math.max(...line.items.map(i => i.v - i.desc * i.fh));
+      // candidate gaps (for column gutters)
+      line.gaps = [];
+      let end = -Infinity;
+      line.items.forEach((it, i) => {
+        if (i > 0 && it.u - end >= 0.6 * line.fh) line.gaps.push({ a: end, b: it.u, i });
+        end = Math.max(end, it.u + it.w);
+      });
+    }
+
+    // Column gutters: an empty vertical band repeated on 3+ consecutive lines (tables without borders)
+    const gutters = new Set();
+    lines.sort((a, b) => a.v - b.v);
+    for (let li = 0; li < lines.length; li++) {
+      for (const g of lines[li].gaps) {
+        let a = g.a, b = g.b, count = 1;
+        for (const dir of [-1, 1]) {
+          let ca = a, cb = b;
+          for (let lj = li + dir; lj >= 0 && lj < lines.length; lj += dir) {
+            const L = lines[lj], prev = lines[lj - dir];
+            if (Math.abs(L.v - prev.v) > 3 * Math.max(L.fh, prev.fh)) break;
+            const hit = L.gaps.find(h => Math.min(cb, h.b) - Math.max(ca, h.a) >= 0.4 * Math.min(L.fh, lines[li].fh));
+            if (!hit) break;
+            ca = Math.max(ca, hit.a); cb = Math.min(cb, hit.b); count++;
+          }
+          if (dir === -1) { a = ca; b = cb; }
+          else { a = Math.max(a, ca); b = Math.min(b, cb); }
+        }
+        if (count >= 3 && b - a >= 0.3 * lines[li].fh) gutters.add(g);
+      }
+    }
+
+    for (const line of lines) {
+      const its = line.items;
       let seg = [];
       let end = -Infinity;
-      for (const it of its) {
+      its.forEach((it, i) => {
         if (seg.length) {
-          if (seg.some(g => g.str === it.str && Math.abs(g.u - it.u) < it.fh * 0.3)) continue;   // fake-bold duplicates
-          if (it.u - end > 1.6 * Math.max(it.fh, seg[seg.length - 1].fh)) { makeBlock(seg, angle); seg = []; end = -Infinity; }
+          const gap = it.u - end;
+          const fh = Math.max(it.fh, seg[seg.length - 1].fh);
+          let split = gap > 1.25 * fh || line.gaps.some(g => g.i === i && gutters.has(g));
+          if (!split && horizontal) {
+            const tol = 0.2 * fh;
+            split = vseps.some(r => r.x >= end - tol && r.x <= it.u + tol &&
+              Math.min(r.y1, line.bottom) - Math.max(r.y0, line.top) > (line.bottom - line.top) * 0.5);
+          }
+          if (split) { makeBlock(seg, angle); seg = []; end = -Infinity; }
         }
         seg.push(it);
         end = Math.max(end, it.u + it.w);
-      }
+      });
       if (seg.length) makeBlock(seg, angle);
     }
+  }
+
+  // Cell bounds, alignment and room to grow for each horizontal block (edits stay inside)
+  const pageW = vp1.width, pageH = vp1.height;
+  const H = blocks.filter(b => b.frame.angle === 0);
+  const box = b => ({ x0: b.bbox.x, x1: b.bbox.x + b.bbox.w, y0: b.bbox.y, y1: b.bbox.y + b.bbox.h, fh: b.fontSize || b.bbox.h });
+  for (const b of H) {
+    const { x0, x1, y0, y1, fh } = box(b);
+    const tol = 0.25 * fh;
+    const vOverlap = r => Math.min(r.y1, y1) - Math.max(r.y0, y0) > (y1 - y0) * 0.5;
+    const hOverlap = r => Math.min(r.x1, x1) - Math.max(r.x0, x0) > Math.min(x1 - x0, r.x1 - r.x0) * 0.5;
+    const cell = { left: 0, right: pageW, top: 0, bottom: pageH, hasLeft: false, hasRight: false };
+    for (const r of vseps) {
+      if (!vOverlap(r)) continue;
+      if (r.x <= x0 + tol && r.x + r.w / 2 > cell.left) { cell.left = r.x + r.w / 2; cell.hasLeft = true; }
+      if (r.x >= x1 - tol && r.x - r.w / 2 < cell.right) { cell.right = r.x - r.w / 2; cell.hasRight = true; }
+    }
+    for (const r of gfx.h) {
+      if (!hOverlap(r)) continue;
+      if (r.y <= y0 + tol) cell.top = Math.max(cell.top, r.y + r.w / 2);
+      if (r.y >= y1 - tol) cell.bottom = Math.min(cell.bottom, r.y - r.w / 2);
+    }
+    // smallest background containing the text (zebra rows, coloured cells)
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    let bgBox = null;
+    for (const f of gfx.fills) {
+      if (cx < f.x0 || cx > f.x1 || cy < f.y0 || cy > f.y1) continue;
+      if (!bgBox || (f.x1 - f.x0) * (f.y1 - f.y0) < (bgBox.x1 - bgBox.x0) * (bgBox.y1 - bgBox.y0)) bgBox = f;
+    }
+    if (bgBox) {
+      if (bgBox.x0 > cell.left) { cell.left = bgBox.x0; cell.hasLeft = cell.hasLeft || (bgBox.x1 - bgBox.x0) < pageW * 0.6; }
+      if (bgBox.x1 < cell.right) { cell.right = bgBox.x1; cell.hasRight = cell.hasRight || (bgBox.x1 - bgBox.x0) < pageW * 0.6; }
+      cell.top = Math.max(cell.top, bgBox.y0); cell.bottom = Math.min(cell.bottom, bgBox.y1);
+    }
+    b.cell = cell;
+    // same line neighbours
+    b._prev = null; b._next = null;
+    for (const o of H) {
+      if (o === b) continue;
+      const q = box(o);
+      if (Math.min(q.y1, y1) - Math.max(q.y0, y0) <= 0.3 * Math.min(q.y1 - q.y0, y1 - y0)) continue;
+      if (q.x0 >= x1 - 0.5 && (!b._next || q.x0 < b._next.bbox.x)) b._next = o;
+      if (q.x1 <= x0 + 0.5 && (!b._prev || q.x1 > b._prev.bbox.x + b._prev.bbox.w)) b._prev = o;
+    }
+    // column mates: nearby rows sharing an edge / centre
+    let L = 0, R = 0, C = 0, colL = x0, colR = x1;
+    for (const o of H) {
+      if (o === b) continue;
+      const q = box(o);
+      if (Math.abs(q.y0 - y0) > 12 * fh || q.x1 < x0 || q.x0 > x1 || (q.x1 - q.x0) > pageW * 0.6) continue;
+      const l = Math.abs(q.x0 - x0) < 1, r = Math.abs(q.x1 - x1) < 1, c = Math.abs((q.x0 + q.x1) - (x0 + x1)) < 2;
+      if (l) L++; if (r) R++; if (c) C++;
+      if (l || r || c) { colL = Math.min(colL, q.x0); colR = Math.max(colR, q.x1); }
+    }
+    b._colL = colL; b._colR = colR;
+    let align = 'left';
+    if (cell.hasLeft && cell.hasRight) {
+      const lg = x0 - cell.left, rg = cell.right - x1;
+      if (rg < lg * 0.6) align = 'right';
+      else if (lg > 2 && Math.abs(lg - rg) < 0.2 * (lg + rg)) align = 'center';
+    } else if (R >= 2 && R > L && R >= C) align = 'right';
+    else if (C >= 2 && C > L && C > R) align = 'center';
+    b.align = align;
+  }
+  for (const b of H) {
+    const { x0, x1, fh } = box(b);
+    const cell = b.cell;
+    const halfGutter = (a, z) => Math.max(0.35 * fh, (z - a) / 2);
+    // keep the cell's own inner padding on both sides (mirrors the original text)
+    let pad = 1;
+    if (cell.hasLeft && cell.hasRight) {
+      const padL = x0 - cell.left, padR = cell.right - x1;
+      pad = clamp(0.5 * (b.align === 'right' ? padR : b.align === 'left' ? padL : Math.min(padL, padR)), 1, 0.5 * fh);
+    }
+    let right = cell.hasRight ? cell.right - pad : pageW - 1;
+    let left  = cell.hasLeft ? cell.left + pad : 1;
+    if (b._next) {
+      const n = b._next, nL = Math.min(n._colL ?? n.bbox.x, n.bbox.x);
+      right = Math.min(right, nL > b._colR ? nL - halfGutter(b._colR, nL) : n.bbox.x - 0.35 * fh);
+    }
+    if (b._prev) {
+      const p = b._prev, pR = Math.max(p._colR ?? (p.bbox.x + p.bbox.w), p.bbox.x + p.bbox.w);
+      left = Math.max(left, pR < b._colL ? pR + halfGutter(pR, b._colL) : p.bbox.x + p.bbox.w + 0.35 * fh);
+    }
+    b.limit = { left: Math.min(left, x0), right: Math.max(right, x1), top: cell.top + 0.5, bottom: cell.bottom - 0.5 };
+    delete b._prev; delete b._next;
   }
 
   info.blocks = blocks;
@@ -1045,6 +1310,7 @@ function selectBlock(key) {
     ? `Original font: ${block.fontLabel} · background ${colors.bg}`
     : `Background detected: ${colors.bg}`;
   $('btnResetBlock').disabled = !edit;
+  updateFitWarning(edit || null);
 }
 
 function editFromPanel() {
@@ -1052,7 +1318,7 @@ function editFromPanel() {
   if (!block) return null;
   const detected = block._detected || sampleRegion(block.bbox, 3);
   const coverAuto = $('propCoverAuto').checked;
-  return {
+  const edit = {
     key: block.key, page: block.page,
     bbox: block.bbox, frame: block.frame, baseline: block.baseline, origText: block.origText,
     text: sanitizeText($('propText').value),
@@ -1064,21 +1330,101 @@ function editFromPanel() {
     bgColor: $('propBgColor').value,
     bgOpacity: clamp(parseFloat($('propBgOpacity').value) || 0, 0, 1),
     rotation: parseFloat($('propRotation').value) || 0,
+    clip: block.cell || null,
+    limit: $('propFit').checked && block.limit ? block.limit : null,
+    align: block.align || 'left',
+    anchor: { left: block.bbox.x, right: block.bbox.x + block.bbox.w },
   };
+  const measure = (ln, size) => {
+    const ctx = fitCtx();
+    ctx.font = buildCanvasFont(edit.fontName, size);
+    return ctx.measureText(ln).width;
+  };
+  edit.drawSize = fittedSize(edit, measure);
+  edit.overflow = textOverflows(edit, edit.drawSize, measure);
+  return edit;
+}
+
+// Still too wide for the cell at the smallest allowed size → it will be cut at the cell edge
+function textOverflows(e, size, measure) {
+  if (!e.limit || !e.text || (e.rotation || 0) !== 0 || (e.frame && e.frame.angle)) return false;
+  const widest = Math.max(...e.text.split('\n').map(ln => measure(ln, size)));
+  return widest > editAvailWidth(e) + 0.5;
+}
+
+// Clip area for overflowing text: the cell / column, full height of the text
+function editClipRect(e, size) {
+  const L = e.limit, cover = coverPoly(e);
+  const n = (e.text || '').split('\n').length;
+  const top = Math.min(cover[0].y, e.baseline.y - size * 1.1);
+  const bottom = Math.max(cover[2].y, e.baseline.y + size * 0.35 + (n - 1) * size * LINE_HEIGHT);
+  return { x: L.left, y: Math.max(top, L.top - 0.5), w: L.right - L.left, h: Math.min(bottom, L.bottom + 0.5) - Math.max(top, L.top - 0.5) };
+}
+
+// Horizontal room for the new text, following the original alignment
+function editAvailWidth(e) {
+  const L = e.limit;
+  if (!L) return Infinity;
+  const a = e.anchor || { left: e.baseline.x, right: e.baseline.x };
+  if (e.align === 'right')  return a.right - L.left;
+  if (e.align === 'center') { const c = (a.left + a.right) / 2; return 2 * Math.min(c - L.left, L.right - c); }
+  return L.right - e.baseline.x;
+}
+
+// x of a line of the new text (keeps right-aligned amounts right-aligned, etc.)
+function editLineX(e, width) {
+  if ((e.rotation || 0) !== 0 || (e.frame && e.frame.angle) || !e.anchor) return e.baseline.x;
+  if (e.align === 'right')  return e.anchor.right - width;
+  if (e.align === 'center') return (e.anchor.left + e.anchor.right) / 2 - width / 2;
+  return e.baseline.x;
+}
+
+let _fitCtx = null;
+function fitCtx() { return _fitCtx || (_fitCtx = document.createElement('canvas').getContext('2d')); }
+
+// Font size keeping the new text inside its cell / column (never below half the size)
+function fittedSize(e, measure, minSize = e.fontSize * 0.5) {
+  let size = e.fontSize;
+  const L = e.limit;
+  if (!L || !e.text || (e.rotation || 0) !== 0 || e.frame?.angle) return size;
+  const lines = e.text.split('\n');
+  const availW = editAvailWidth(e);
+  if (availW > 4) {
+    const widest = Math.max(...lines.map(ln => measure(ln, size)));
+    if (widest > availW) size = size * availW / widest * 0.98;
+  }
+  const availH = L.bottom - L.top;
+  if (lines.length > 1 && availH > 4 && lines.length * size * LINE_HEIGHT > availH) size = availH / (lines.length * LINE_HEIGHT);
+  return Math.max(Math.round(size * 20) / 20, minSize);
+}
+
+function updateFitWarning(e) {
+  const w = $('propFitWarn');
+  if (!w) return;
+  w.style.display = e && e.overflow ? '' : 'none';
 }
 
 function updateDraft() {
   if (!selectedBlockKey) return;
   draftEdit = editFromPanel();
+  updateFitWarning(draftEdit);
   ensureCanvasFont(draftEdit?.fontName, composite);
   composite();
 }
 
 // Area hiding the original text: the text frame (rotated with the text), padded
 function coverPoly(e) {
-  if (e.frame) return framePoly(e.frame, 1);
+  if (e.frame && e.frame.angle) return framePoly(e.frame, 1);
   const r = e.bbox;
-  return framePoly({ angle: 0, u: r.x, v: r.y, w: r.w, h: r.h }, 1);
+  let x0 = r.x - 1, y0 = r.y - 1, x1 = r.x + r.w + 1, y1 = r.y + r.h + 1;
+  const c = e.clip;
+  if (c) {
+    // Stay inside the cell: table borders and neighbouring backgrounds survive
+    const cx0 = Math.max(x0, c.left + 0.3), cx1 = Math.min(x1, c.right - 0.3);
+    const cy0 = Math.max(y0, c.top + 0.3), cy1 = Math.min(y1, c.bottom - 0.3);
+    if (cx1 - cx0 >= r.w * 0.8 && cy1 - cy0 >= r.h * 0.6) { x0 = cx0; x1 = cx1; y0 = cy0; y1 = cy1; }
+  }
+  return [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
 }
 
 function fillPoly(ctx, poly) {
@@ -1104,12 +1450,21 @@ function drawTextEditCanvas(ctx, e) {
     ctx.globalAlpha = 1;
   }
   ctx.save();
-  ctx.translate(e.baseline.x, e.baseline.y);
-  if (e.rotation) ctx.rotate(-e.rotation * Math.PI / 180);
-  ctx.font = buildCanvasFont(e.fontName, e.fontSize);
+  const size = e.drawSize || e.fontSize;
+  ctx.font = buildCanvasFont(e.fontName, size);
   ctx.fillStyle = e.color || '#000000';
   ctx.textBaseline = 'alphabetic';
-  (e.text || '').split('\n').forEach((ln, i) => ctx.fillText(ln, 0, i * e.fontSize * LINE_HEIGHT));
+  if (e.overflow && e.limit) {
+    const r = editClipRect(e, size);
+    ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip();
+  }
+  if (e.rotation) {
+    ctx.translate(e.baseline.x, e.baseline.y);
+    ctx.rotate(-e.rotation * Math.PI / 180);
+    (e.text || '').split('\n').forEach((ln, i) => ctx.fillText(ln, 0, i * size * LINE_HEIGHT));
+  } else {
+    (e.text || '').split('\n').forEach((ln, i) => ctx.fillText(ln, editLineX(e, ctx.measureText(ln).width), e.baseline.y + i * size * LINE_HEIGHT));
+  }
   ctx.restore();
 }
 
@@ -1140,7 +1495,7 @@ $('btnResetBlock').addEventListener('click', async () => {
   webEditorToast('↺ Original text restored');
 });
 
-['propText', 'propFont', 'propSize', 'propColor', 'propBgColor', 'propBgOpacity', 'propRotation', 'propCoverColor', 'propCoverAuto']
+['propText', 'propFont', 'propSize', 'propColor', 'propBgColor', 'propBgOpacity', 'propRotation', 'propCoverColor', 'propCoverAuto', 'propFit']
   .forEach(id => $(id).addEventListener('input', () => {
     if (id === 'propCoverColor') $('propCoverAuto').checked = false;
     if (id === 'propCoverAuto' && $('propCoverAuto').checked) {
@@ -2331,9 +2686,9 @@ const FONT_MAP_STD = {
   'Helvetica-Oblique':     'HelveticaOblique',
   'Helvetica-BoldOblique': 'HelveticaBoldOblique',
   'Times-Roman':           'TimesRoman',
-  'Times-Bold':            'TimesBold',
-  'Times-Italic':          'TimesItalic',
-  'Times-BoldItalic':      'TimesBoldItalic',
+  'Times-Bold':            'TimesRomanBold',
+  'Times-Italic':          'TimesRomanItalic',
+  'Times-BoldItalic':      'TimesRomanBoldItalic',
   'Courier':               'Courier',
   'Courier-Bold':          'CourierBold',
   'Courier-Oblique':       'CourierOblique',
@@ -2396,7 +2751,7 @@ class FontManager {
     name = name || 'Helvetica';
     if (this.cache.has(name)) return this.cache.get(name);
     let font;
-    if (FONT_MAP_STD[name]) {
+    if (FONT_MAP_STD[name] && PDFLib.StandardFonts[FONT_MAP_STD[name]]) {
       font = await this.doc.embedFont(PDFLib.StandardFonts[FONT_MAP_STD[name]]);
     } else if (FONT_MAP_GF[name] && typeof fontkit !== 'undefined') {
       try { font = await this.doc.embedFont(await fetchWithTimeout(FONT_MAP_GF[name])); }
@@ -2605,12 +2960,23 @@ async function drawAllChanges(doc, fonts, mapperFor, native) {
     if (!e.text) continue;
     const text  = sanitizeText(e.text);
     const chain = await fonts.chainFor(e.fontName, text);
-    const rot = e.rotation || 0, a = rot * Math.PI / 180, lh = e.fontSize * LINE_HEIGHT;
+    // Same fit as the preview, re-checked with the real PDF font metrics
+    const size = Math.min(e.drawSize || e.fontSize, fittedSize({ ...e, fontSize: e.drawSize || e.fontSize }, (ln, sz) => fonts.width(chain, ln, sz), Math.min(e.drawSize || e.fontSize, e.fontSize * 0.5)));
+    const rot = e.rotation || 0, a = rot * Math.PI / 180, lh = size * LINE_HEIGHT;
+    const clipped = textOverflows({ ...e, text }, size, (ln, sz) => fonts.width(chain, ln, sz));
+    if (clipped) {
+      const r = editClipRect(e, size);
+      const pts = [M.pt(r.x, r.y), M.pt(r.x + r.w, r.y), M.pt(r.x + r.w, r.y + r.h), M.pt(r.x, r.y + r.h)];
+      page.pushOperators(PDFLib.pushGraphicsState(), PDFLib.moveTo(pts[0].x, pts[0].y),
+        ...pts.slice(1).map(p => PDFLib.lineTo(p.x, p.y)), PDFLib.closePath(), PDFLib.clip(), PDFLib.endPath());
+    }
     text.split('\n').forEach((line, i) => {
+      const x0 = rot ? e.baseline.x : editLineX(e, fonts.width(chain, line, size));
       fonts.drawLine(page, M, chain, line,
-        e.baseline.x + i * lh * Math.sin(a), e.baseline.y + i * lh * Math.cos(a),
-        e.fontSize, rgbLib(e.color), rot);
+        x0 + i * lh * Math.sin(a), e.baseline.y + i * lh * Math.cos(a),
+        size, rgbLib(e.color), rot);
     });
+    if (clipped) page.pushOperators(PDFLib.popGraphicsState());
   }
 
   // 2. Annotations (in creation order)

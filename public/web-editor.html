@@ -688,6 +688,10 @@
               <input class="prop-input" id="propRotation" type="number" value="0" min="-360" max="360" step="1">
             </div>
           </div>
+          <label class="prop-check" style="margin-bottom:10px;" title="Shrinks the new text if it is wider than its table cell / column, so borders and neighbouring cells are never covered">
+            <input type="checkbox" id="propFit" checked> Fit in cell / column
+          </label>
+          <div class="prop-hint" id="propFitWarn" style="display:none;color:var(--warn);">⚠ Too long for this cell even at half size: the end is cut at the cell border. Shorten the text or uncheck “Fit in cell”.</div>
           <div class="prop-row">
             <div class="prop-label">Cover the original text with</div>
             <div class="prop-inline">
